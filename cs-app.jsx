@@ -1,0 +1,195 @@
+/* ============================================================
+   APP ROOT — Brand Window
+   ============================================================ */
+const { useState, useRef } = React;
+
+function App() {
+  const colors = { amarula: "#C8860A", bernini: "#4A7FB5", hunters: "#2E6B2F" };
+
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem("cs_gemini_key") || "");
+  const aiUnavailable = false; /* default key always available — dept can override in sidebar */
+  const [signalKeyword, setSignalKeyword] = useState(() => localStorage.getItem("cs_signal_kw") || "");
+
+  const [brandSel, setBrandSel] = useState("hunters");
+  const [month, setMonth] = useState(3);   // April
+  const [year, setYear] = useState(2026);
+  const [runState, setRunState] = useState("idle");
+  const [fetchErr, setFetchErr] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [suggesting, setSuggesting] = useState(false);
+  const [cards, setCards] = useState([]);
+
+  const handleSetApiKey = (k) => { localStorage.setItem("cs_gemini_key", k); setApiKey(k); };
+  const handleSetSignal = (k) => { localStorage.setItem("cs_signal_kw", k); setSignalKeyword(k); };
+
+  const brandLabel = BRANDS[brandSel].name;
+  const brandCat = BRANDS[brandSel].cat;
+  const ctxColor = colors[brandSel];
+  const hasCards = cards.length > 0;
+
+  const invalidate = () => { setRunState("idle"); setCards([]); setFetchErr(null); };
+  const chooseBrand = (b) => { if (b !== brandSel) { setBrandSel(b); setRunState("idle"); setCards([]); setFetchErr(null); } };
+  const chooseMonth = (m) => { setMonth(m); invalidate(); };
+  const chooseYear  = (y) => { setYear(y); invalidate(); };
+
+  const onRun = async () => {
+    setRunState("running");
+    setFetchErr(null);
+    try {
+      const fetched = await loadSheetCompetitors(brandSel, colors, month, year);
+      setCards(fetched);
+      setRunState("ready");
+
+      /* Auto-analyze every competitor sequentially with a small stagger */
+      if (fetched.length > 0 && !aiUnavailable) {
+        for (let i = 0; i < fetched.length; i++) {
+          if (i > 0) await new Promise(r => setTimeout(r, 3000)); /* 3s stagger between calls */
+          setCards(prev => prev.map((c, ci) => ci === i ? { ...c, analyzing: true } : c));
+          try {
+            const res = await analyzeWindow(fetched[i], BRANDS[brandSel].name, month, year, apiKey, signalKeyword);
+            setCards(prev => prev.map((c, ci) => ci === i ? { ...c, analyzing: false, analyzed: true, snapshot: res.snapshot, themes: res.themes, insight: res.insight, sentiment: res.sentiment, postFrequency: res.postFrequency, effectivenessScore: res.effectivenessScore, executiveSummary: res.executiveSummary, keyCampaigns: res.keyCampaigns, contentSnapshot: res.contentSnapshot, creativeScores: res.creativeScores, whitespace: res.whitespace, recommendations: res.recommendations, signalMatch: res.signalMatch, signalNote: res.signalNote } : c));
+          } catch (e) {
+            console.error("Auto-analyze failed for", fetched[i].name, e);
+            setCards(prev => prev.map((c, ci) => ci === i ? { ...c, analyzing: false, analyzeError: e.message } : c));
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Sheet fetch failed", e);
+      setFetchErr(e.message || "Could not load sheet data");
+      setRunState("idle");
+    }
+  };
+
+  const patchCard = (ci, patch) => setCards((prev) => prev.map((c, i) => (i === ci ? { ...c, ...patch } : c)));
+
+  const onAnalyze = async (ci) => {
+    const card = cards[ci];
+    patchCard(ci, { analyzing: true, analyzeError: null });
+    try {
+      const res = await analyzeWindow(card, brandLabel, month, year, apiKey, signalKeyword);
+      patchCard(ci, { analyzing: false, analyzed: true, snapshot: res.snapshot, themes: res.themes, insight: res.insight, sentiment: res.sentiment, postFrequency: res.postFrequency, effectivenessScore: res.effectivenessScore, executiveSummary: res.executiveSummary, keyCampaigns: res.keyCampaigns, contentSnapshot: res.contentSnapshot, creativeScores: res.creativeScores, whitespace: res.whitespace, recommendations: res.recommendations, signalMatch: res.signalMatch, signalNote: res.signalNote });
+    } catch (e) { console.error("Analyze failed", e); patchCard(ci, { analyzing: false, analyzeError: e.message }); }
+  };
+  const onAnalyzeAll = async () => { for (let i = 0; i < cards.length; i++) if (!cards[i].analyzed) await onAnalyze(i); };
+
+  const onSetPost = (cardIdx, slotIdx, url) => {
+    setCards(prev => prev.map((c, i) => {
+      if (i !== cardIdx) return c;
+      const posts = [...(c.posts || ["","","","","",""])];
+      posts[slotIdx] = url;
+      return { ...c, posts };
+    }));
+  };
+
+  const onSuggest = async () => {
+    setSuggesting(true);
+    try {
+      const comps = await suggestCompetitors(brandLabel, brandCat, apiKey);
+      setCards(comps.map((c) => freshCard(c, ctxColor, brandSel, "ai")));
+      setRunState("ready");
+    } catch (e) { console.error("Suggest failed", e); }
+    setSuggesting(false);
+  };
+
+  const stateForExport = () => ({ brandLabel, brandColor: ctxColor, month, year, cards, signalKeyword });
+  const onGenerate = async () => {
+    setBusy(true);
+    try { await generatePDF(stateForExport()); } catch (e) { console.error(e); }
+    setBusy(false);
+  };
+  const [reportBusy, setReportBusy] = useState(false);
+  const [pptBusy, setPptBusy] = useState(false);
+  const [showMethodology, setShowMethodology] = useState(false);
+  const onGenerateReport = async () => {
+    setReportBusy(true);
+    try { await generateReport(stateForExport()); } catch (e) { console.error(e); }
+    setReportBusy(false);
+  };
+  const onGeneratePPT = async () => {
+    setPptBusy(true);
+    try { await generatePPT(stateForExport()); } catch (e) { console.error(e); }
+    setPptBusy(false);
+  };
+
+  const analyzedCount = cards.filter((c) => c.analyzed).length;
+  const canReport = canExport && analyzedCount > 0;
+  const allAnalyzing = cards.some((c) => c.analyzing);
+  const canExport = runState === "ready" && hasCards;
+
+  return (
+    <div className="app">
+      <Preloader cards={cards} runState={runState} />
+      <Sidebar
+        brandSel={brandSel} setBrandSel={chooseBrand}
+        month={month} setMonth={chooseMonth} year={year} setYear={chooseYear}
+        runState={runState} onRun={onRun} colors={colors}
+        onGenerate={onGenerate} busy={busy} canExport={canExport}
+        signalKeyword={signalKeyword} setSignalKeyword={handleSetSignal}
+        onGenerateReport={onGenerateReport} reportBusy={reportBusy} canReport={canReport}
+        onGeneratePPT={onGeneratePPT} pptBusy={pptBusy}
+        onShowMethodology={() => setShowMethodology(true)} />
+
+      <MethodologyPanel show={showMethodology} onClose={() => setShowMethodology(false)} />
+      <main className="stage">
+        <div className="stage-inner">
+          <div className="stage-head">
+            <div>
+              <div className="sh-eyebrow">John Joseph · Strategy Intelligence</div>
+              <div className="sh-title">{brandLabel} Brand Window</div>
+            </div>
+            <div className="sh-meta">
+              <div className="sh-count">{MONTHS[month]} {year}</div>
+              <div>{hasCards ? `${analyzedCount}/${cards.length} analyzed` : "—"}</div>
+            </div>
+          </div>
+
+          {runState === "running" ? (
+            <div className="stage-msg">
+              <div className="sm-glyph" style={{ animation: "pulse 1s ease-in-out infinite" }}>◈</div>
+              <h2>{hasCards ? `Analyzing ${brandLabel} competitors…` : `Loading ${brandLabel} competitors…`}</h2>
+              <p>{hasCards ? `Running AI analysis on ${cards.filter(c=>c.analyzed).length} of ${cards.length} brand windows. Hang tight.` : "Fetching competitor links from the tracker sheet."}</p>
+            </div>
+          ) : runState !== "ready" ? (
+            <div className="stage-msg">
+              {fetchErr && <div className="sm-err">⚠ {fetchErr}</div>}
+              <div className="sm-glyph">◈</div>
+              <h2>Ready when you are.</h2>
+              <p>Select a brand and reporting period, then run the snapshot to pull live competitor links from the tracker and build a brand window per competitor.</p>
+              <div className="sm-meta">No windows loaded · {brandLabel}</div>
+            </div>
+          ) : !hasCards ? (
+            <div className="stage-msg">
+              <div className="sm-glyph">⬡</div>
+              <h2>No competitor links for {brandLabel}.</h2>
+              <p>The {brandLabel} tab of the tracker hasn't been synced yet. Share that tab — or let Claude propose the key {brandCat.toLowerCase()} competitors to profile now.</p>
+              <button className={"sm-btn " + (suggesting ? "busy" : "")} onClick={onSuggest} disabled={suggesting || aiUnavailable}>
+                <span className="sparkle">✦</span>{suggesting ? "Finding competitors…" : "Suggest competitors with AI"}
+              </button>
+              {aiUnavailable && <div className="sm-meta">AI unavailable in this view</div>}
+            </div>
+          ) : (
+            <React.Fragment>
+              <CategorySlide cards={cards} month={month} year={year} brandLabel={brandLabel} />
+              <div className="stage-actions">
+                <button className="btn-refresh" onClick={() => { invalidateSheetCache(brandSel); invalidate(); }} title="Re-fetch from sheet">↺ Refresh</button>
+                <button className={"analyze-all " + (allAnalyzing ? "busy" : "")} onClick={onAnalyzeAll} disabled={allAnalyzing || aiUnavailable}>
+                  <span className="sparkle">✦</span>{allAnalyzing ? "Analyzing all…" : "Analyze all windows"}
+                </button>
+              </div>
+              <div className="pages">
+                {cards.map((c, i) => (
+                  <WindowPage key={brandSel + "-" + c.name} card={c} idx={i} total={cards.length}
+                    brandLabel={brandLabel} year={year} onAnalyze={onAnalyze} aiUnavailable={aiUnavailable}
+                    signalKeyword={signalKeyword} onSetPost={onSetPost} />
+                ))}
+              </div>
+            </React.Fragment>
+          )}
+        </div>
+      </main>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
