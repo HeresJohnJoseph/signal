@@ -184,8 +184,8 @@ async function callGeminiBrowser(prompt, apiKey, attempt = 0) {
     return callGeminiBrowser(prompt, apiKey, attempt + 1);
   }
   if (res.status === 429 && attempt < 1) {
-    /* One retry after 70s — covers per-minute RPM reset. If it fails again the quota is daily-exhausted. */
-    const wait = 70000;
+    /* One retry after 90s — safely covers the 60s per-minute RPM reset window */
+    const wait = 90000;
     console.info(`[Gemini] 429 — retrying once in ${wait/1000}s`);
     if (window.__onAnalyzeStatus) window.__onAnalyzeStatus("High demand — giving it a moment before retrying…");
     await new Promise(r => setTimeout(r, wait));

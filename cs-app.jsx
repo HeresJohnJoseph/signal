@@ -49,7 +49,7 @@ function App() {
       /* Auto-analyze every competitor sequentially with a small stagger */
       if (fetched.length > 0 && !aiUnavailable) {
         for (let i = 0; i < fetched.length; i++) {
-          if (i > 0) await new Promise(r => setTimeout(r, 3000)); /* 3s stagger between calls */
+          if (i > 0) await new Promise(r => setTimeout(r, 12000)); /* 12s stagger — Gemini free tier is 10 RPM */
           setCards(prev => prev.map((c, ci) => ci === i ? { ...c, analyzing: true } : c));
           try {
             const res = await analyzeWindow(fetched[i], BRANDS[brandSel].name, month, year, apiKey, signalKeyword);
