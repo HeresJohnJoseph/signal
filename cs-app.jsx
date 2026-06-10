@@ -9,6 +9,8 @@ function App() {
   const [apiKey, setApiKey] = useState(() => getStoredKey());
   const aiUnavailable = false;
 
+  const resetKey = () => { clearKey(); setApiKey(""); };
+
   if (!apiKey) {
     return <SetupScreen onSave={(k) => setApiKey(k)} />;
   }
@@ -54,6 +56,7 @@ function App() {
             setCards(prev => prev.map((c, ci) => ci === i ? { ...c, analyzing: false, analyzed: true, snapshot: res.snapshot, themes: res.themes, insight: res.insight, sentiment: res.sentiment, postFrequency: res.postFrequency, effectivenessScore: res.effectivenessScore, executiveSummary: res.executiveSummary, keyCampaigns: res.keyCampaigns, contentSnapshot: res.contentSnapshot, creativeScores: res.creativeScores, whitespace: res.whitespace, recommendations: res.recommendations, signalMatch: res.signalMatch, signalNote: res.signalNote } : c));
           } catch (e) {
             console.error("Auto-analyze failed for", fetched[i].name, e);
+            if (e.message?.toLowerCase().includes("leaked")) { resetKey(); return; }
             setCards(prev => prev.map((c, ci) => ci === i ? { ...c, analyzing: false, analyzeError: e.message } : c));
           }
         }
@@ -73,7 +76,11 @@ function App() {
     try {
       const res = await analyzeWindow(card, brandLabel, month, year, apiKey, signalKeyword);
       patchCard(ci, { analyzing: false, analyzed: true, snapshot: res.snapshot, themes: res.themes, insight: res.insight, sentiment: res.sentiment, postFrequency: res.postFrequency, effectivenessScore: res.effectivenessScore, executiveSummary: res.executiveSummary, keyCampaigns: res.keyCampaigns, contentSnapshot: res.contentSnapshot, creativeScores: res.creativeScores, whitespace: res.whitespace, recommendations: res.recommendations, signalMatch: res.signalMatch, signalNote: res.signalNote });
-    } catch (e) { console.error("Analyze failed", e); patchCard(ci, { analyzing: false, analyzeError: e.message }); }
+    } catch (e) {
+      console.error("Analyze failed", e);
+      if (e.message?.toLowerCase().includes("leaked")) { resetKey(); return; }
+      patchCard(ci, { analyzing: false, analyzeError: e.message });
+    }
   };
   const onAnalyzeAll = async () => { for (let i = 0; i < cards.length; i++) if (!cards[i].analyzed) await onAnalyze(i); };
 
