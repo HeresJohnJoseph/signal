@@ -294,7 +294,11 @@ function WindowPage(props) {
           <span className="web-msg">
             {card.analyzeError.startsWith("quota_exceeded")
               ? "Analysis unavailable right now — the intelligence engine is at capacity and will reset overnight. Slide data and exports are unaffected."
-              : "Analysis could not complete. Please try re-analyzing in a moment."}
+              : card.analyzeError.startsWith("No <chart_data>")
+                ? "Analysis returned an incomplete response — click Re-analyze to try again."
+                : card.analyzeError.startsWith("Gemini blocked")
+                  ? "Content was flagged by the AI filter — try a different competitor or re-analyze."
+                  : `Analysis could not complete: ${card.analyzeError}`}
           </span>
         </div>
       )}

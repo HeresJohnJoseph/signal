@@ -202,8 +202,21 @@ async function callGeminiBrowser(prompt, apiKey, attempt = 0) {
     throw new Error(msg);
   }
   const data = await res.json();
-  const parts = data.candidates?.[0]?.content?.parts || [];
-  return parts.map(p => p.text || "").join("");
+  /* Grounded responses include functionCall/functionResponse parts alongside text — only join text parts */
+  const candidate = data.candidates?.[0];
+  if (!candidate) {
+    const reason = data.promptFeedback?.blockReason || "No candidate returned";
+    throw new Error(`Gemini blocked: ${reason}`);
+  }
+  const parts = candidate.content?.parts || [];
+  const text = parts.filter(p => typeof p.text === "string").map(p => p.text).join("");
+  if (!text && attempt < 2) {
+    /* Empty text with grounding occasionally happens on first call — retry once */
+    console.info("[Gemini] Empty response — retrying");
+    await new Promise(r => setTimeout(r, 3000));
+    return callGeminiBrowser(prompt, apiKey, attempt + 1);
+  }
+  return text;
 }
 
 /* Primary entry point — proxy when available, direct fallback otherwise */
@@ -308,8 +321,15 @@ RULES:
 - creativeScores = integer 1-10 each dimension
 - Base all values on real search results; use informed estimates where search data is incomplete`;
 
-  const raw = await callGemini(prompt, apiKey);
-  const cd  = parseChartData(raw);
+  let raw = await callGemini(prompt, apiKey);
+  let cd  = parseChartData(raw);
+  if (!cd) {
+    /* One automatic retry — grounding sometimes returns partial output on first call */
+    console.info("[analyzeWindow] No chart_data — retrying once");
+    await new Promise(r => setTimeout(r, 4000));
+    raw = await callGemini(prompt, apiKey);
+    cd  = parseChartData(raw);
+  }
   if (!cd) throw new Error("No <chart_data> block in Gemini response.");
 
   const byPlat = {};
