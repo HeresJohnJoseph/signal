@@ -151,8 +151,10 @@ function isActive(role) { return (role || "").toLowerCase() === "primary"; }
 const PROXY        = "http://localhost:4323";
 const GEMINI_MODEL = "gemini-2.5-flash";
 const GEMINI_URL   = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
-/* Shared department key — teammates don't need to enter anything */
-const DEFAULT_KEY  = "AIzaSyC6H-NlF4VMYFBhe4pTbohPx4TPOpUo6ZA";
+const LS_KEY = "signal_gemini_key";
+function getStoredKey() { return localStorage.getItem(LS_KEY) || ""; }
+function saveKey(k) { localStorage.setItem(LS_KEY, k.trim()); }
+function clearKey() { localStorage.removeItem(LS_KEY); }
 
 /* Check if the proxy is alive (fast, no throws) */
 async function proxyAlive() {
@@ -221,7 +223,8 @@ async function callGeminiBrowser(prompt, apiKey, attempt = 0) {
 
 /* Primary entry point — proxy when available, direct fallback otherwise */
 async function callGemini(prompt, apiKey) {
-  const key = apiKey || DEFAULT_KEY;   /* use shared dept key if none entered */
+  const key = apiKey || getStoredKey();
+  if (!key) throw new Error("no_key: No API key configured.");
   if (await proxyAlive()) {
     const res = await fetch(`${PROXY}/api/analyze`, {
       method: "POST",

@@ -298,7 +298,9 @@ function WindowPage(props) {
                 ? "Analysis returned an incomplete response — click Re-analyze to try again."
                 : card.analyzeError.startsWith("Gemini blocked")
                   ? "Content was flagged by the AI filter — try a different competitor or re-analyze."
-                  : `Analysis could not complete: ${card.analyzeError}`}
+                  : card.analyzeError.startsWith("no_key")
+                    ? "No API key found — reload the page to set one up."
+                    : `Analysis could not complete: ${card.analyzeError}`}
           </span>
         </div>
       )}
@@ -686,4 +688,63 @@ function Sidebar(props) {
   );
 }
 
-Object.assign(window, { WindowPage, Sidebar, CategorySlide, MethodologyPanel, Preloader, DESIGN_W, DESIGN_H });
+/* ---- First-time API key setup screen ---- */
+function SetupScreen({ onSave }) {
+  const [val, setVal] = _useS("");
+  const [err, setErr] = _useS("");
+  const [busy, setBusy] = _useS(false);
+
+  const handleSave = async () => {
+    const k = val.trim();
+    if (!k) { setErr("Paste your API key above to continue."); return; }
+    setBusy(true); setErr("");
+    try {
+      /* Quick validation — tiny prompt to confirm the key works */
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${k}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: "Reply with the single word OK" }] }], generationConfig: { maxOutputTokens: 5 } }),
+      });
+      if (res.status === 400 || res.status === 403) { setErr("That key isn't valid — double-check and try again."); setBusy(false); return; }
+      if (res.status === 429) { /* quota but key is real */ }
+      saveKey(k);
+      onSave(k);
+    } catch { setErr("Network error — make sure you're connected and try again."); }
+    setBusy(false);
+  };
+
+  return (
+    <div className="setup-screen">
+      <div className="setup-card">
+        <div className="setup-brandmark">◈</div>
+        <h1 className="setup-title">Signal</h1>
+        <p className="setup-sub">Brand & Competitor Intelligence · VML South Africa</p>
+        <div className="setup-divider" />
+        <p className="setup-body">
+          Signal uses Google's Gemini AI to research competitors in real time. You need a free API key to activate the intelligence engine — it takes 30 seconds to get one and you'll only ever need to do this once.
+        </p>
+        <a className="setup-link" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">
+          Get a free key at aistudio.google.com →
+        </a>
+        <div className="setup-field-wrap">
+          <input
+            className={"setup-input" + (err ? " error" : "")}
+            type="password"
+            placeholder="Paste your Gemini API key here…"
+            value={val}
+            onChange={e => { setVal(e.target.value); setErr(""); }}
+            onKeyDown={e => e.key === "Enter" && handleSave()}
+            autoFocus
+          />
+          {err && <div className="setup-err">⚠ {err}</div>}
+        </div>
+        <button className={"setup-btn" + (busy ? " busy" : "")} onClick={handleSave} disabled={busy || !val.trim()}>
+          {busy ? "Checking key…" : "Activate Signal →"}
+        </button>
+        <p className="setup-note">Your key is stored only in this browser. It never leaves your device.</p>
+      </div>
+    </div>
+  );
+}
+
+Object.assign(window, { WindowPage, Sidebar, CategorySlide, MethodologyPanel, Preloader, SetupScreen, DESIGN_W, DESIGN_H });

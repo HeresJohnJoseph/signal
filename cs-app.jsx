@@ -6,8 +6,12 @@ const { useState, useRef } = React;
 function App() {
   const colors = { amarula: "#C8860A", bernini: "#4A7FB5", hunters: "#2E6B2F" };
 
-  const [apiKey, setApiKey] = useState(() => localStorage.getItem("cs_gemini_key") || "");
-  const aiUnavailable = false; /* default key always available — dept can override in sidebar */
+  const [apiKey, setApiKey] = useState(() => getStoredKey());
+  const aiUnavailable = false;
+
+  if (!apiKey) {
+    return <SetupScreen onSave={(k) => setApiKey(k)} />;
+  }
   const [signalKeyword, setSignalKeyword] = useState(() => localStorage.getItem("cs_signal_kw") || "");
 
   const [brandSel, setBrandSel] = useState("hunters");

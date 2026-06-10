@@ -820,3 +820,74 @@ image-slot[data-kind="avatar"]::part(ring) { border: 1.5px solid rgba(255,255,25
 .lex-entry:last-child { border-bottom: none; }
 .lex-term { font-size: 12px; font-weight: 700; color: var(--text-1); }
 .lex-def { font-size: 12px; line-height: 1.6; color: var(--text-2); }
+
+/* ============================================================
+   SETUP / FIRST-TIME KEY SCREEN
+   ============================================================ */
+.setup-screen {
+  position: fixed; inset: 0; background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 9999; padding: 24px;
+}
+.setup-card {
+  width: 100%; max-width: 480px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 20px; padding: 48px 40px;
+  display: flex; flex-direction: column; align-items: center; gap: 0;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.5);
+}
+.setup-brandmark {
+  font-size: 28px; color: var(--accent); margin-bottom: 12px; line-height: 1;
+}
+.setup-title {
+  font-family: var(--serif); font-size: 42px; font-weight: 700;
+  color: var(--text-1); margin: 0 0 6px; letter-spacing: -0.01em;
+}
+.setup-sub {
+  font-family: var(--mono); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--text-3); margin: 0 0 28px;
+}
+.setup-divider {
+  width: 48px; height: 2px; background: var(--accent);
+  border-radius: 2px; margin-bottom: 28px;
+}
+.setup-body {
+  font-size: 13.5px; line-height: 1.7; color: var(--text-2);
+  text-align: center; margin: 0 0 16px;
+}
+.setup-link {
+  font-size: 12px; font-weight: 700; color: var(--accent);
+  text-decoration: none; letter-spacing: 0.03em;
+  margin-bottom: 28px; display: inline-block;
+}
+.setup-link:hover { opacity: 0.8; }
+.setup-field-wrap { width: 100%; margin-bottom: 16px; }
+.setup-input {
+  width: 100%; box-sizing: border-box;
+  background: var(--surface-2); border: 1px solid var(--border-2);
+  border-radius: 10px; padding: 14px 16px;
+  font-family: var(--mono); font-size: 13px; color: var(--text-1);
+  outline: none; transition: border-color .15s;
+}
+.setup-input:focus { border-color: var(--accent); }
+.setup-input.error { border-color: var(--red); }
+.setup-input::placeholder { color: var(--text-3); }
+.setup-err {
+  margin-top: 8px; font-size: 12px; color: var(--red); font-weight: 600;
+}
+.setup-btn {
+  width: 100%; padding: 15px; border: none; border-radius: 10px;
+  background: var(--accent); color: #fff;
+  font-family: var(--sans); font-size: 14px; font-weight: 800;
+  letter-spacing: 0.04em; cursor: pointer;
+  transition: opacity .15s, transform .1s;
+  margin-bottom: 16px;
+}
+.setup-btn:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
+.setup-btn:disabled { opacity: 0.45; cursor: default; transform: none; }
+.setup-btn.busy { opacity: 0.6; cursor: wait; }
+.setup-note {
+  font-size: 11px; color: var(--text-3); text-align: center;
+  line-height: 1.5; margin: 0;
+}
