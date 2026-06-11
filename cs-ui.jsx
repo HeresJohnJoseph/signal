@@ -293,7 +293,7 @@ function WindowPage(props) {
           <span className="web-ic">⚠</span>
           <span className="web-msg">
             {card.analyzeError.startsWith("quota_exceeded")
-              ? "Analysis unavailable right now — the intelligence engine is at capacity and will reset overnight. Slide data and exports are unaffected."
+              ? "Gemini hit its rate limit — click Re-analyze to retry. (Free tier resets every minute; daily quota resets overnight.)"
               : card.analyzeError.startsWith("No <chart_data>")
                 ? "Analysis returned an incomplete response — click Re-analyze to try again."
                 : card.analyzeError.startsWith("Gemini blocked")
@@ -344,7 +344,9 @@ function Preloader({ cards, runState }) {
   if (!visible) return null;
 
   const dots = "●●●●".slice(0, (tick % 4) + 1).padEnd(4, "○");
-  const progress = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
+  /* Count the actively-analyzing card as half-done so the bar moves immediately */
+  const effectiveDone = doneCount + (isAnalyzing ? 0.5 : 0);
+  const progress = totalCount > 0 ? Math.round((effectiveDone / totalCount) * 100) : 0;
 
   return (
     <div className="preloader-toast">
@@ -378,7 +380,7 @@ function Preloader({ cards, runState }) {
           </div>
         )}
         {errorCount > 0 && (
-          <div className="plt-err-note">{errorCount} failed — check console</div>
+          <div className="plt-err-note">{errorCount} couldn't complete — click Re-analyze to retry</div>
         )}
       </div>
       <div className="plt-dots">{dots}</div>
@@ -527,7 +529,7 @@ function MethodologyPanel({ show, onClose }) {
       <div className="meth-panel" onClick={e => e.stopPropagation()}>
         <div className="meth-head">
           <div>
-            <div className="meth-eyebrow">Brand Window · Intelligence Engine</div>
+            <div className="meth-eyebrow">Signal · Intelligence Engine</div>
             <div className="meth-title">Methodology &amp; Lexicon</div>
           </div>
           <button className="meth-close" onClick={onClose}>✕</button>
@@ -536,7 +538,7 @@ function MethodologyPanel({ show, onClose }) {
         <div className="meth-body">
           <div className="meth-section">
             <div className="meth-sec-title">How it works</div>
-            <p>Brand Window uses <strong>Gemini 2.5 Flash</strong> with <strong>Google Search grounding</strong> to conduct live competitor research for the selected reporting month. Each analysis pull draws on indexed social posts, press coverage, and brand activity — not static training data. Results are returned as structured intelligence covering social presence, content strategy, creative effectiveness, and audience sentiment.</p>
+            <p>Signal uses <strong>Gemini 2.5 Flash</strong> with <strong>Google Search grounding</strong> to conduct live competitor research for the selected reporting month. Each analysis pull draws on indexed social posts, press coverage, and brand activity — not static training data. Results are returned as structured intelligence covering social presence, content strategy, creative effectiveness, and audience sentiment.</p>
             <p>Data is sourced from your live <strong>Competitor Tracker Google Sheet</strong>. The sheet defines which competitors to profile per brand, their social handles, and the reporting month each row applies to. Run Snapshot fetches only the rows matching your selected month and year.</p>
           </div>
 
@@ -603,7 +605,7 @@ function Sidebar(props) {
         <div className="brandmark">
           <div className="bm-icon">◈</div>
           <div>
-            <div className="wm">Brand Window</div>
+            <div className="wm">Signal</div>
             <div className="sub">John Joseph · Intelligence</div>
           </div>
         </div>
@@ -700,9 +702,10 @@ function SetupScreen({ onSave }) {
     setBusy(true); setErr("");
     try {
       /* Quick validation — tiny prompt to confirm the key works */
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${k}`, {
+      const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        /* Key in header — supports both legacy AIzaSy and new AQ. key formats */
+        headers: { "Content-Type": "application/json", "x-goog-api-key": k },
         body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: "Reply with the single word OK" }] }], generationConfig: { maxOutputTokens: 5 } }),
       });
       if (res.status === 400 || res.status === 403) { setErr("That key isn't valid — double-check and try again."); setBusy(false); return; }
