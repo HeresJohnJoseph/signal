@@ -4,8 +4,17 @@
 const { useState: _useS, useRef: _useR, useLayoutEffect: _useLE, useCallback: _useCB } = React;
 
 /* ---------- Interactive post image slot ---------- */
+/* Social CDNs (Instagram/Facebook) block hotlinking — external URLs are
+   routed through the weserv.nl image proxy so they actually render. */
+function proxiedSrc(url) {
+  if (!url || url.startsWith("data:")) return url;
+  if (/^https?:\/\//.test(url)) return "https://images.weserv.nl/?url=" + encodeURIComponent(url);
+  return url;
+}
+
 function PostSlot({ imageUrl, onSet, slotIdx }) {
   const [drag, setDrag] = _useS(false);
+  const [broken, setBroken] = _useS(false);
 
   const applyFile = _useCB((file) => {
     if (!file || !file.type.startsWith("image/")) return;
@@ -20,18 +29,21 @@ function PostSlot({ imageUrl, onSet, slotIdx }) {
     if (file) { applyFile(file); return; }
     /* also try dragged image URL */
     const url = e.dataTransfer.getData("text/uri-list") || e.dataTransfer.getData("text/plain");
-    if (url && /^https?:/.test(url)) onSet(slotIdx, url);
+    if (url && /^https?:/.test(url)) { setBroken(false); onSet(slotIdx, url); }
   };
 
   const onPaste = (e) => {
     const item = [...(e.clipboardData?.items || [])].find(i => i.type.startsWith("image/"));
-    if (item) applyFile(item.getAsFile());
+    if (item) { applyFile(item.getAsFile()); return; }
+    /* pasted text that is an image URL (e.g. Copy Image Address) */
+    const txt = e.clipboardData?.getData("text/plain")?.trim();
+    if (txt && /^https?:\/\//.test(txt)) { setBroken(false); onSet(slotIdx, txt); }
   };
 
   const onClick = () => {
-    if (imageUrl) { onSet(slotIdx, ""); return; } /* click filled = clear */
+    if (imageUrl) { setBroken(false); onSet(slotIdx, ""); return; } /* click filled = clear */
     const url = window.prompt("Paste image URL from the competitor's feed:");
-    if (url?.trim()) onSet(slotIdx, url.trim());
+    if (url?.trim()) { setBroken(false); onSet(slotIdx, url.trim()); }
   };
 
   return (
@@ -45,8 +57,14 @@ function PostSlot({ imageUrl, onSet, slotIdx }) {
       tabIndex={0}
       title={imageUrl ? "Click to clear" : "Click · Paste (⌘V) · Drop image"}
     >
-      {imageUrl
-        ? <img src={imageUrl} alt="post" style={{ width:"100%", height:"100%", objectFit:"cover", borderRadius:"14px", display:"block" }} />
+      {imageUrl && !broken
+        ? <img src={proxiedSrc(imageUrl)} alt="post" onError={() => setBroken(true)}
+               style={{ width:"100%", height:"100%", objectFit:"cover", borderRadius:"14px", display:"block" }} />
+        : imageUrl && broken
+        ? <div className="post-slot-empty">
+            <span className="ps-ic">⚠</span>
+            <span className="ps-err">Couldn't load — click to clear,<br/>then try Copy Image instead</span>
+          </div>
         : <div className="post-slot-empty">
             <span className="ps-ic">＋</span>
           </div>
