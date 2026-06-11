@@ -203,4 +203,19 @@ function App() {
   );
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+/* Validate any stored key before rendering — a dead/leaked key is cleared
+   automatically so the user lands on the setup screen instead of a broken app. */
+(async () => {
+  const k = getStoredKey();
+  if (k) {
+    try {
+      const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": k },
+        body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: "ok" }] }], generationConfig: { maxOutputTokens: 1 } }),
+      });
+      if (res.status === 400 || res.status === 403) clearKey();
+    } catch { /* network error — keep key, app will surface errors normally */ }
+  }
+  ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+})();
