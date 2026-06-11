@@ -57,6 +57,22 @@ function PostSlot({ imageUrl, onSet, slotIdx }) {
 
 const DESIGN_W = 1380, DESIGN_H = 781;
 
+/* ---------- Key-activity highlighter ----------
+   Renders **marked** phrases from Gemini as bold orange so campaign
+   names and events jump out. Stray/unclosed markers are stripped. */
+function Hi({ text }) {
+  const parts = String(text || "").split(/\*\*(.+?)\*\*/g);
+  return (
+    <React.Fragment>
+      {parts.map((p, i) =>
+        i % 2 === 1
+          ? <strong className="hi-key" key={i}>{p}</strong>
+          : <React.Fragment key={i}>{p.replace(/\*\*/g, "")}</React.Fragment>
+      )}
+    </React.Fragment>
+  );
+}
+
 /* ---------- Collapsible insight bar (above canvas) ---------- */
 function InsightBar({ insight }) {
   const [expanded, setExpanded] = _useS(false);
@@ -66,7 +82,7 @@ function InsightBar({ insight }) {
     <div className="wp-insight">
       <span className="wi-ic">◈</span>
       <span className="wi-text">
-        {expanded || !needs ? insight : insight.slice(0, LIMIT) + "…"}
+        <Hi text={expanded || !needs ? insight : insight.slice(0, LIMIT) + "…"} />
         {needs && (
           <button className="wi-toggle" onClick={() => setExpanded(v => !v)}>
             {expanded ? " ▴ Less" : " ▾ Read more"}
@@ -133,7 +149,7 @@ function WindowCanvas({ card, idx, total, brandLabel, year, ids, onSetPost }) {
       {card.insight && (
         <div className="wp-canvas-insight">
           <span className="wci-label">Strategic Insight</span>
-          <span className="wci-text">{card.insight.length > 160 ? card.insight.slice(0, 157) + "…" : card.insight}</span>
+          <span className="wci-text"><Hi text={card.insight.length > 160 ? card.insight.slice(0, 157) + "…" : card.insight} /></span>
         </div>
       )}
 
@@ -576,6 +592,130 @@ function MethodologyPanel({ show, onClose }) {
   );
 }
 
+/* ---------- Social Audit — period-over-period competitor view ---------- */
+function SocialAuditPanel({ show, onClose, cards, apiKey, year }) {
+  const [compName, setCompName] = _useS("");
+  const [fromMonth, setFromMonth] = _useS(0);
+  const [fromYear, setFromYear] = _useS(year);
+  const [toMonth, setToMonth] = _useS(5);
+  const [toYear, setToYear] = _useS(year);
+  const [busy, setBusy] = _useS(false);
+  const [err, setErr] = _useS("");
+  const [result, setResult] = _useS(null);
+
+  if (!show) return null;
+  const names = cards.map(c => c.name);
+  const name = compName || names[0] || "";
+
+  const monthCount = (toYear - fromYear) * 12 + (toMonth - fromMonth) + 1;
+  const rangeOk = monthCount >= 1 && monthCount <= 12;
+
+  const run = async () => {
+    if (!name.trim()) { setErr("Enter a competitor name."); return; }
+    if (!rangeOk) { setErr("Pick a range of 1–12 months (From must be before To)."); return; }
+    setBusy(true); setErr(""); setResult(null);
+    try {
+      const res = await auditCompetitor(name.trim(), fromMonth, fromYear, toMonth, toYear, apiKey);
+      setResult(res);
+    } catch (e) {
+      setErr(e.message?.startsWith("quota_exceeded")
+        ? "Gemini hit its rate limit — wait a minute and try again."
+        : "Audit could not complete: " + (e.message || "unknown error"));
+    }
+    setBusy(false);
+  };
+
+  const maxLvl = result ? Math.max(1, ...result.timeline.map(t => t.activityLevel)) : 1;
+
+  return (
+    <div className="meth-overlay" onClick={onClose}>
+      <div className="meth-panel audit-panel" onClick={e => e.stopPropagation()}>
+        <div className="meth-head">
+          <div>
+            <div className="meth-eyebrow">Signal · Social Audit</div>
+            <div className="meth-title">Period-over-Period View</div>
+          </div>
+          <button className="meth-close" onClick={onClose}>✕</button>
+        </div>
+
+        <div className="audit-controls">
+          <div className="ac-field ac-name">
+            <label>Competitor</label>
+            {names.length > 0 ? (
+              <select value={name} onChange={e => setCompName(e.target.value)}>
+                {names.map(n => <option key={n} value={n}>{n}</option>)}
+              </select>
+            ) : (
+              <input value={compName} onChange={e => setCompName(e.target.value)} placeholder="e.g. Castle Lite" />
+            )}
+          </div>
+          <div className="ac-field">
+            <label>From</label>
+            <div className="ac-pair">
+              <select value={fromMonth} onChange={e => setFromMonth(+e.target.value)}>
+                {MONTHS.map((m, i) => <option key={m} value={i}>{m.slice(0,3)}</option>)}
+              </select>
+              <input type="number" value={fromYear} onChange={e => setFromYear(+e.target.value)} />
+            </div>
+          </div>
+          <div className="ac-field">
+            <label>To</label>
+            <div className="ac-pair">
+              <select value={toMonth} onChange={e => setToMonth(+e.target.value)}>
+                {MONTHS.map((m, i) => <option key={m} value={i}>{m.slice(0,3)}</option>)}
+              </select>
+              <input type="number" value={toYear} onChange={e => setToYear(+e.target.value)} />
+            </div>
+          </div>
+          <button className={"audit-run " + (busy ? "busy" : "")} onClick={run} disabled={busy}>
+            <span className="sparkle">✦</span>{busy ? "Auditing…" : "Run Audit"}
+          </button>
+        </div>
+
+        {err && <div className="wp-err-bar" style={{ margin: "0 28px 14px" }}><span className="web-ic">⚠</span><span className="web-msg">{err}</span></div>}
+
+        {busy && (
+          <div className="audit-busy">
+            <div className="sm-glyph" style={{ animation: "pulse 1s ease-in-out infinite" }}>◷</div>
+            <p>Researching {name} from {MONTHS[fromMonth]} {fromYear} to {MONTHS[toMonth]} {toYear} — one pass, every month…</p>
+          </div>
+        )}
+
+        {result && (
+          <div className="audit-results">
+            {result.trend && (
+              <div className="audit-trend">
+                <span className="wci-label">Period Trend</span>
+                <span className="audit-trend-txt"><Hi text={result.trend} /></span>
+              </div>
+            )}
+            <div className="audit-timeline">
+              {result.timeline.map((t, i) => (
+                <div className="at-row" key={i}>
+                  <div className="at-rail">
+                    <span className="at-dot"></span>
+                    {i < result.timeline.length - 1 && <span className="at-line"></span>}
+                  </div>
+                  <div className="at-body">
+                    <div className="at-head">
+                      <span className="at-month">{t.month}</span>
+                      <span className="at-headline"><Hi text={t.headline} /></span>
+                      <span className="at-lvl-wrap" title={`Activity level ${t.activityLevel}/10`}>
+                        <span className="at-lvl-bar" style={{ width: (t.activityLevel / maxLvl * 100) + "%" }}></span>
+                      </span>
+                    </div>
+                    <div className="at-summary"><Hi text={t.summary} /></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ---------- Sidebar control panel ---------- */
 function Sidebar(props) {
   const { brandSel, setBrandSel, month, setMonth, year, setYear, runState, onRun,
@@ -668,6 +808,10 @@ function Sidebar(props) {
           <span className="ppt-ic">⬛</span>{pptBusy ? "Building deck…" : "Export PowerPoint Deck"}
         </button>
 
+        <button className="btn-audit" onClick={props.onShowAudit}>
+          <span className="audit-ic">◷</span>Social Audit · Period View
+        </button>
+
         <button className="btn-meth" onClick={onShowMethodology}>
           <span className="meth-ic">ℹ</span>Methodology &amp; Lexicon
         </button>
@@ -750,4 +894,4 @@ function SetupScreen({ onSave }) {
   );
 }
 
-Object.assign(window, { WindowPage, Sidebar, CategorySlide, MethodologyPanel, Preloader, SetupScreen, DESIGN_W, DESIGN_H });
+Object.assign(window, { WindowPage, Sidebar, CategorySlide, MethodologyPanel, Preloader, SetupScreen, SocialAuditPanel, Hi, DESIGN_W, DESIGN_H });
