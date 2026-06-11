@@ -471,7 +471,7 @@ html, body {
   background: #131720;
   border-radius: 6px;
   box-shadow: 0 0 0 1px rgba(255,255,255,0.06), 0 32px 80px rgba(0,0,0,0.7);
-  padding: 30px 42px 22px;
+  padding: 22px 42px 18px;
   display: flex; flex-direction: column;
   position: relative; overflow: hidden;
 }
@@ -487,14 +487,14 @@ html, body {
 .wp-eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: 0.28em; text-transform: uppercase; color: var(--text-3); font-weight: 700; }
 .wp-active-lbl { font-family: var(--mono); font-size: 10px; letter-spacing: 0.26em; text-transform: uppercase; color: var(--text-3); }
 
-.wp-identity { display: flex; align-items: center; justify-content: space-between; margin-top: 6px; }
+.wp-identity { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; }
 .wp-id-left { display: flex; align-items: center; gap: 22px; }
-.logo-slot { width: 84px; height: 84px; flex-shrink: 0; }
+.logo-slot { width: 72px; height: 72px; flex-shrink: 0; }
 .wp-name-block { display: flex; flex-direction: column; }
-.wp-name { font-family: var(--serif); font-weight: 700; font-size: 44px; line-height: 1; color: var(--text-1); letter-spacing: 0; }
-.wp-name-sub { font-family: var(--sans); font-size: 12px; font-weight: 700; letter-spacing: 0.26em; text-transform: uppercase; color: var(--text-3); margin-top: 9px; }
+.wp-name { font-family: var(--serif); font-weight: 700; font-size: 40px; line-height: 1; color: var(--text-1); letter-spacing: 0; }
+.wp-name-sub { font-family: var(--sans); font-size: 11px; font-weight: 700; letter-spacing: 0.26em; text-transform: uppercase; color: var(--text-3); margin-top: 6px; }
 
-.wp-actives { display: flex; gap: 11px; align-items: center; margin-top: 18px; }
+.wp-actives { display: flex; gap: 11px; align-items: center; margin-top: 10px; }
 .pf-chip {
   width: 36px; height: 36px; border-radius: 9px;
   display: flex; align-items: center; justify-content: center;
@@ -508,25 +508,25 @@ html, body {
   display: flex; align-items: baseline; gap: 12px;
   background: rgba(255,85,0,0.1); border: 1px solid rgba(255,85,0,0.2);
   border-left: 3px solid var(--accent);
-  border-radius: 8px; padding: 7px 16px; margin: 8px 0 2px; flex-shrink: 0;
+  border-radius: 8px; padding: 5px 16px; margin: 6px 0 2px; flex-shrink: 0;
 }
 .wci-label {
   font-family: var(--mono); font-size: 8px; font-weight: 700; letter-spacing: 0.22em;
   text-transform: uppercase; color: var(--accent); flex-shrink: 0; white-space: nowrap;
 }
 .wci-text {
-  font-size: 11.5px; line-height: 1.45; color: var(--text-2); flex: 1;
+  font-size: 12.5px; line-height: 1.5; color: #B0BAD0; flex: 1;
   overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
 }
 
 /* canvas body */
-.wp-body { display: grid; grid-template-columns: 36% 1fr; gap: 24px; margin-top: 10px; flex: 1; min-height: 0; }
-.wp-col { display: flex; flex-direction: column; gap: 20px; min-height: 0; }
+.wp-body { display: grid; grid-template-columns: 36% 1fr; gap: 20px; margin-top: 8px; flex: 1; min-height: 0; }
+.wp-col { display: flex; flex-direction: column; gap: 12px; min-height: 0; }
 
 .wp-card {
   background: #1C2130;
   border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 18px; padding: 19px 24px;
+  border-radius: 18px; padding: 14px 20px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.3);
 }
 .wp-card.grow { display: flex; flex-direction: column; min-height: 0; flex: 1; }
@@ -544,7 +544,7 @@ html, body {
 .snap-head span { font-family: var(--sans); font-size: 9.5px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-3); }
 .snap-row {
   display: grid; grid-template-columns: 1.25fr 0.95fr 1.9fr; gap: 10px;
-  align-items: center; padding: 11px 14px; border-bottom: 1px solid rgba(255,255,255,0.05);
+  align-items: center; padding: 8px 14px; border-bottom: 1px solid rgba(255,255,255,0.05);
 }
 .snap-row:last-child { border-bottom: none; }
 .snap-plat { display: flex; align-items: center; gap: 10px; }
@@ -556,10 +556,10 @@ html, body {
 .snap-role .sr-dot.primary { background: var(--accent); }
 .snap-role .sr-dot.light { background: var(--yellow); }
 .snap-role .sr-dot.inactive { background: var(--text-3); }
-.snap-role .sr-lbl { font-size: 12.5px; font-weight: 600; color: var(--text-2); }
-.snap-role .sr-lbl.muted { color: var(--text-3); }
-.snap-comment { font-size: 12.5px; color: var(--text-3); letter-spacing: 0.005em; }
-.snap-comment.empty { color: var(--text-3); font-style: italic; opacity: 0.6; }
+.snap-role .sr-lbl { font-size: 12.5px; font-weight: 600; color: var(--text-1); }
+.snap-role .sr-lbl.muted { color: var(--text-2); }
+.snap-comment { font-size: 12.5px; color: var(--text-2); letter-spacing: 0.005em; }
+.snap-comment.empty { color: var(--text-3); font-style: italic; opacity: 0.8; }
 
 /* sentiment bar */
 .sent-card { flex-shrink: 0; }
@@ -577,9 +577,9 @@ html, body {
 .sl-item.neg-l { color: #f87171; } .sl-item.neg-l .sl-dot { background: #ef4444; }
 
 /* theme bars */
-.themes-wrap { display: flex; flex-direction: column; gap: 11px; justify-content: center; flex: 1; }
-.theme-row { display: grid; grid-template-columns: 92px 1fr; align-items: center; gap: 14px; }
-.theme-lbl { font-family: var(--sans); font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-2); text-align: right; }
+.themes-wrap { display: flex; flex-direction: column; gap: 8px; justify-content: center; flex: 1; }
+.theme-row { display: grid; grid-template-columns: 104px 1fr; align-items: center; gap: 14px; }
+.theme-lbl { font-family: var(--sans); font-size: 11.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-1); text-align: right; }
 .theme-track { height: 11px; border-radius: 999px; background: rgba(255,255,255,0.07); position: relative; overflow: hidden; }
 .theme-fill { position: absolute; inset: 0 auto 0 0; height: 100%; border-radius: 999px; transition: width .7s cubic-bezier(.2,.7,.2,1); }
 .theme-fill.navy { background: linear-gradient(90deg, #FF7A3D, #FF5500); }
@@ -617,8 +617,9 @@ image-slot[data-kind="avatar"]::part(ring) { border: 1.5px solid rgba(255,255,25
 /* canvas footer */
 .wp-footer {
   display: flex; align-items: center; justify-content: center;
-  position: relative; padding-top: 12px; margin-top: 6px;
+  position: relative; padding-top: 10px; margin-top: 4px;
   border-top: 1px solid rgba(255,255,255,0.05);
+  flex-shrink: 0;
 }
 .wp-foot-center { font-family: var(--sans); font-size: 12px; font-weight: 800; letter-spacing: 0.34em; text-transform: uppercase; color: var(--text-3); }
 .wp-foot-right { position: absolute; right: 0; bottom: 0; text-align: right; font-family: var(--sans); font-size: 10px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent); line-height: 1.5; opacity: 0.7; }
