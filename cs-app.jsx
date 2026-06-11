@@ -147,7 +147,7 @@ function App() {
           <div className="stage-head">
             <div>
               <div className="sh-eyebrow">John Joseph · Strategy Intelligence</div>
-              <div className="sh-title">{brandLabel} Brand Window</div>
+              <div className="sh-title">{brandLabel} · Signal</div>
             </div>
             <div className="sh-meta">
               <div className="sh-count">{MONTHS[month]} {year}</div>
