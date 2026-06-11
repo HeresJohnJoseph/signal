@@ -666,6 +666,7 @@ image-slot[data-kind="avatar"]::part(ring) { border: 1.5px solid rgba(255,255,25
 }
 .post-slot-empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; pointer-events: none; }
 .ps-ic { font-size: 22px; color: rgba(255,255,255,0.15); line-height: 1; }
+.ps-err { font-size: 10.5px; color: var(--text-2); text-align: center; line-height: 1.5; }
 
 /* ============================================================
    SOCIAL AUDIT PANEL
