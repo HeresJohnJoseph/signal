@@ -259,6 +259,11 @@ function parseInsight(text) {
   return text.replace(/<chart_data>[\s\S]*?<\/chart_data>/gi, "").replace(/```[\s\S]*?```/g, "").trim();
 }
 
+/* Strip **highlight markers** for plain-text contexts (PDF/PPT exports) */
+function stripHi(text) {
+  return String(text || "").replace(/\*\*(.+?)\*\*/g, "$1");
+}
+
 /* ---- analyzeWindow: grounded brand window analysis ---- */
 async function analyzeWindow(card, clientLabel, month, year, apiKey, signalKeyword) {
   const handles = [
@@ -291,6 +296,7 @@ Search for:
 9. One sentence on their biggest whitespace/missed opportunity this period, and one sentence strategic recommendation${signalInstruction}
 
 Begin with a 2-3 sentence strategic insight (plain text paragraph, no headers).
+IMPORTANT: In the strategic insight AND the executiveSummary, wrap every key activity — campaign names, event names, sponsorships, product launches, collabs (e.g. **Surprisingly Good Sets**, **LIV Golf**, **FIFA World Cup**) — in **double asterisks** so they can be highlighted. Use them on the 2-5 most important named activities only.
 
 Then output EXACTLY this block:
 
@@ -410,6 +416,52 @@ Exactly 4 real competing brands. Include their actual Instagram URL if findable.
   const out = JSON.parse(s);
   if (!out || !Array.isArray(out.competitors)) throw new Error("Bad AI response");
   return out.competitors.slice(0, 4);
+}
+
+/* ---- auditCompetitor: month-by-month social audit over a period range ---- */
+async function auditCompetitor(name, fromMonth, fromYear, toMonth, toYear, apiKey) {
+  const fromLbl = `${MONTHS[fromMonth]} ${fromYear}`;
+  const toLbl   = `${MONTHS[toMonth]} ${toYear}`;
+  const prompt =
+`You are a senior brand strategist building a period-over-period social media audit for the South African market.
+
+Use Google Search to research the brand "${name}" in South Africa across the period ${fromLbl} to ${toLbl} (inclusive).
+
+For EACH month in the range, find: the dominant campaign or activity, key content themes, and any notable launches, sponsorships or events.
+In every summary, wrap key activity names (campaigns, events, launches, collabs) in **double asterisks**.
+
+Output EXACTLY this block (one entry per month, in chronological order):
+
+<chart_data>
+{
+  "timeline":[
+    {"month":"Month YYYY","headline":"<=8 word headline of the month's focus","summary":"2 sentence summary with **key activities** marked","activityLevel":<1-10>}
+  ],
+  "trend":"2-3 sentence overall trend analysis across the period, with **key activities** marked"
+}
+</chart_data>
+
+RULES:
+- activityLevel = posting/campaign intensity that month, 1-10
+- Base on real search results; use informed estimates where data is incomplete`;
+
+  let raw = await callGemini(prompt, apiKey);
+  let cd  = parseChartData(raw);
+  if (!cd) {
+    await new Promise(r => setTimeout(r, 4000));
+    raw = await callGemini(prompt, apiKey);
+    cd  = parseChartData(raw);
+  }
+  if (!cd || !Array.isArray(cd.timeline)) throw new Error("No <chart_data> block in Gemini response.");
+  return {
+    timeline: cd.timeline.map(t => ({
+      month: String(t.month || ""),
+      headline: String(t.headline || ""),
+      summary: String(t.summary || ""),
+      activityLevel: Math.min(10, Math.max(1, Math.round(Number(t.activityLevel) || 5))),
+    })),
+    trend: String(cd.trend || "").trim(),
+  };
 }
 
 /* ---------- PowerPoint handoff prompt ---------- */
@@ -686,7 +738,7 @@ async function generateReport(state) {
 
   /* combined insights */
   ty += 16;
-  const combinedInsight = state.cards.filter(c=>c.insight).map(c=>c.insight).join(" ").slice(0, 420);
+  const combinedInsight = state.cards.filter(c=>c.insight).map(c=>stripHi(c.insight)).join(" ").slice(0, 420);
   if (combinedInsight) {
     doc.setFillColor(240,247,255); rr(PAD, ty, CW, 90, 8, "F");
     doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...coral);
@@ -743,8 +795,8 @@ async function generateReport(state) {
       return y + h + 10;
     };
 
-    if (card.executiveSummary) y1 = textBlock("EXECUTIVE SUMMARY", card.executiveSummary, [241,247,255], navy2, PAD, y1, C1W);
-    if (card.insight) y1 = textBlock("STRATEGIC INSIGHT", card.insight, navy, [200,220,240], PAD, y1, C1W);
+    if (card.executiveSummary) y1 = textBlock("EXECUTIVE SUMMARY", stripHi(card.executiveSummary), [241,247,255], navy2, PAD, y1, C1W);
+    if (card.insight) y1 = textBlock("STRATEGIC INSIGHT", stripHi(card.insight), navy, [200,220,240], PAD, y1, C1W);
 
     /* campaigns */
     if (card.keyCampaigns?.length) {
@@ -1057,7 +1109,7 @@ async function generatePPT(state) {
     if (c.executiveSummary) {
       card(slide, LX, 1.05, LW, 1.1, SURFACE);
       slide.addText("EXECUTIVE SUMMARY", { x:LX+0.18, y:1.12, w:LW-0.3, h:0.2, fontSize:7, bold:true, color:ACCENT, charSpacing:1.5, fontFace:"Courier New" });
-      slide.addText(c.executiveSummary, { x:LX+0.18, y:1.33, w:LW-0.3, h:0.72, fontSize:9.5, color:TEXT2, fontFace:"Calibri", valign:"top", wrap:true });
+      slide.addText(stripHi(c.executiveSummary), { x:LX+0.18, y:1.33, w:LW-0.3, h:0.72, fontSize:9.5, color:TEXT2, fontFace:"Calibri", valign:"top", wrap:true });
     }
 
     /* Social Snapshot */
@@ -1125,7 +1177,7 @@ async function generatePPT(state) {
       card(slide, RX, 3.0, RW, 0.78, "12182A");
       slide.addShape(pptx.ShapeType.rect, { x:RX, y:3.0, w:0.045, h:0.78, fill:{color:ACCENT}, line:{color:ACCENT} });
       slide.addText("STRATEGIC INSIGHT", { x:RX+0.2, y:3.08, w:1.8, h:0.18, fontSize:7, bold:true, color:ACCENT, charSpacing:1.5, fontFace:"Courier New" });
-      slide.addText(c.insight, { x:RX+0.2, y:3.27, w:RW-0.3, h:0.45, fontSize:9.5, color:TEXT2, fontFace:"Calibri", wrap:true });
+      slide.addText(stripHi(c.insight), { x:RX+0.2, y:3.27, w:RW-0.3, h:0.45, fontSize:9.5, color:TEXT2, fontFace:"Calibri", wrap:true });
     }
 
     /* Creative Scores */
