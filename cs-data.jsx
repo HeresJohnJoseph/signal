@@ -166,9 +166,10 @@ async function proxyAlive() {
 
 /* Direct browser call to Gemini with auto-retry on 429/503 */
 async function callGeminiBrowser(prompt, apiKey, attempt = 0) {
-  const res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
+  const res = await fetch(GEMINI_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    /* Key sent via header — supports both legacy AIzaSy and new AQ. key formats */
+    headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
     body: JSON.stringify({
       tools: [{ google_search: {} }],
       contents: [{ role: "user", parts: [{ text: prompt }] }],
@@ -187,13 +188,13 @@ async function callGeminiBrowser(prompt, apiKey, attempt = 0) {
     /* One retry after 90s — safely covers the 60s per-minute RPM reset window */
     const wait = 90000;
     console.info(`[Gemini] 429 — retrying once in ${wait/1000}s`);
-    if (window.__onAnalyzeStatus) window.__onAnalyzeStatus("High demand — giving it a moment before retrying…");
+    if (window.__onAnalyzeStatus) window.__onAnalyzeStatus("Rate limit hit — waiting 90s then retrying automatically…");
     await new Promise(r => setTimeout(r, wait));
     return callGeminiBrowser(prompt, apiKey, attempt + 1);
   }
   if (res.status === 429) {
     /* Second 429 = daily quota exhausted, no point retrying */
-    if (window.__onAnalyzeStatus) window.__onAnalyzeStatus("Intelligence engine at capacity — will reset overnight.");
+    if (window.__onAnalyzeStatus) window.__onAnalyzeStatus("Daily API quota reached — click Re-analyze tomorrow or check your Gemini key.");
     throw new Error("quota_exceeded: Daily API quota reached. Analysis will resume when the key resets (typically midnight PT). You can still export slide PDFs with the data already loaded.");
   }
 
