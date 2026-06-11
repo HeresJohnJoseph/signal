@@ -112,6 +112,7 @@ function App() {
   const [reportBusy, setReportBusy] = useState(false);
   const [pptBusy, setPptBusy] = useState(false);
   const [showMethodology, setShowMethodology] = useState(false);
+  const [showAudit, setShowAudit] = useState(false);
   const onGenerateReport = async () => {
     setReportBusy(true);
     try { await generateReport(stateForExport()); } catch (e) { console.error(e); }
@@ -139,9 +140,11 @@ function App() {
         signalKeyword={signalKeyword} setSignalKeyword={handleSetSignal}
         onGenerateReport={onGenerateReport} reportBusy={reportBusy} canReport={canReport}
         onGeneratePPT={onGeneratePPT} pptBusy={pptBusy}
-        onShowMethodology={() => setShowMethodology(true)} />
+        onShowMethodology={() => setShowMethodology(true)}
+        onShowAudit={() => setShowAudit(true)} />
 
       <MethodologyPanel show={showMethodology} onClose={() => setShowMethodology(false)} />
+      <SocialAuditPanel show={showAudit} onClose={() => setShowAudit(false)} cards={cards} apiKey={apiKey} year={year} />
       <main className="stage">
         <div className="stage-inner">
           <div className="stage-head">
