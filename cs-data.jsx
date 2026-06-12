@@ -220,6 +220,37 @@ const GEMINI_MODEL = "gemini-2.5-flash";
 const GEMINI_URL   = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 const LS_KEY = "signal_gemini_key";
 function getStoredKey() { return localStorage.getItem(LS_KEY) || ""; }
+
+/* ---- Apify: auto-load Instagram creative into post slots ---- */
+function getApifyToken() { return localStorage.getItem('signal_apify_token') || ''; }
+function saveApifyToken(t) { localStorage.setItem('signal_apify_token', t); }
+
+async function fetchApifyCreative(igUrl, apifyToken) {
+  if (!igUrl || !apifyToken) return [];
+  const handle = igUrl.replace(/.*instagram\.com\//, '').replace(/\/+$/, '').replace(/^@/, '');
+  if (!handle) return [];
+
+  const res = await fetch(
+    `https://api.apify.com/v2/acts/apify~instagram-scraper/run-sync-get-dataset-items?token=${apifyToken}&timeout=90&memory=256`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        directUrls: [`https://www.instagram.com/${handle}/`],
+        resultsType: 'posts',
+        resultsLimit: 6,
+        addParentData: false,
+      })
+    }
+  );
+
+  if (!res.ok) throw new Error('Apify error ' + res.status);
+  const items = await res.json();
+  return items
+    .slice(0, 6)
+    .map(p => p.displayUrl || p.imageUrl || p.thumbnailUrl || '')
+    .filter(Boolean);
+}
 function saveKey(k) { localStorage.setItem(LS_KEY, k.trim()); }
 function clearKey() { localStorage.removeItem(LS_KEY); }
 

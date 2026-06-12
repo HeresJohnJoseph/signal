@@ -11,6 +11,7 @@ function App() {
   };
 
   const [apiKey, setApiKey] = useState(() => getStoredKey());
+  const [apifyToken, setApifyToken] = useState(() => getApifyToken());
   const aiUnavailable = false;
 
   const resetKey = () => { clearKey(); setApiKey(""); };
@@ -36,6 +37,7 @@ function App() {
 
   const handleSetApiKey = (k) => { localStorage.setItem("cs_gemini_key", k); setApiKey(k); };
   const handleSetSignal = (k) => { localStorage.setItem("cs_signal_kw", k); setSignalKeyword(k); };
+  const handleSetApifyToken = (t) => { saveApifyToken(t); setApifyToken(t); };
 
   const brandLabel = BRANDS[brandSel].name;
   const brandCat = BRANDS[brandSel].cat;
@@ -120,6 +122,28 @@ function App() {
     }
   };
   const onAnalyzeAll = async () => { for (let i = 0; i < cards.length; i++) if (!cards[i].analyzed) await onAnalyze(i); };
+
+  const onLoadCreative = async (ci) => {
+    const card = cards[ci];
+    if (!card.ig) return;
+
+    let token = apifyToken;
+    if (!token) {
+      token = window.prompt("Paste your Apify API token to load social creative.\nGet one free at apify.com/sign-up:");
+      if (!token?.trim()) return;
+      handleSetApifyToken(token.trim());
+    }
+
+    patchCard(ci, { loadingCreative: true });
+    try {
+      const urls = await fetchApifyCreative(card.ig, token);
+      urls.forEach((url, idx) => onSetPost(ci, idx, url));
+      patchCard(ci, { loadingCreative: false });
+    } catch (e) {
+      console.error("Apify creative load failed", e);
+      patchCard(ci, { loadingCreative: false, creativeError: "Couldn't load creative — check your Apify token or try again." });
+    }
+  };
 
   const onSetPost = (cardIdx, slotIdx, url) => {
     setCards(prev => prev.map((c, i) => {
@@ -232,7 +256,7 @@ function App() {
                 {cards.map((c, i) => (
                   <WindowPage key={brandSel + "-" + c.name} card={c} idx={i} total={cards.length}
                     brandLabel={brandLabel} year={year} onAnalyze={onAnalyze} aiUnavailable={aiUnavailable}
-                    signalKeyword={signalKeyword} onSetPost={onSetPost} />
+                    signalKeyword={signalKeyword} onSetPost={onSetPost} onLoadCreative={onLoadCreative} />
                 ))}
               </div>
             </React.Fragment>

@@ -175,7 +175,7 @@ function SignalBadge({ keyword, note, link, brand }) {
 }
 
 /* ---------- The fixed template canvas ---------- */
-function WindowCanvas({ card, idx, total, brandLabel, year, ids, onSetPost }) {
+function WindowCanvas({ card, idx, total, brandLabel, year, ids, onSetPost, onLoadCreative }) {
   return (
     <div className="wp-canvas" data-screen-label={`Window ${String(idx + 1).padStart(2, "0")} · ${card.name}`}>
       {/* header */}
@@ -278,10 +278,21 @@ function WindowCanvas({ card, idx, total, brandLabel, year, ids, onSetPost }) {
               {card.ig && <a href={card.ig} target="_blank" rel="noopener noreferrer" className="plink plink-ig" title="Open Instagram"><PlatformSVG name="Instagram" /></a>}
               {card.fb && <a href={card.fb} target="_blank" rel="noopener noreferrer" className="plink plink-fb" title="Open Facebook"><PlatformSVG name="Facebook" /></a>}
               {card.x  && <a href={card.x}  target="_blank" rel="noopener noreferrer" className="plink plink-x"  title="Open X"><PlatformSVG name="X" /></a>}
-              {card.tiktok && /^https?:/.test(card.tiktok) && <a href={card.tiktok} target="_blank" rel="noopener noreferrer" className="plink plink-tt" title="Open TikTok"><PlatformSVG name="TikTok" /></a>}
+              {card.tiktok && <a href={/^https?:/.test(card.tiktok) ? card.tiktok : `https://www.tiktok.com/@${card.tiktok.replace(/^@/, '')}`} target="_blank" rel="noopener noreferrer" className="plink plink-tt" title="Open TikTok"><PlatformSVG name="TikTok" /></a>}
               {card.web && <a href={card.web} target="_blank" rel="noopener noreferrer" className="plink plink-web" title="Open Website"><PlatformSVG name="Website" /></a>}
             </div>
           </div>
+          {card.ig && (
+            <button
+              className={"btn-load-creative" + (card.loadingCreative ? " busy" : "")}
+              onClick={() => onLoadCreative && onLoadCreative()}
+              disabled={card.loadingCreative}
+              title="Auto-load recent posts from Instagram via Apify"
+            >
+              {card.loadingCreative ? "Loading creative…" : "✦ Auto-load Creative"}
+            </button>
+          )}
+          {card.creativeError && <div className="creative-err">{card.creativeError}</div>}
           <div className="post-grid">
             {[0,1,2,3,4,5].map((n) => (
               <PostSlot key={n} slotIdx={n} imageUrl={(card.posts || [])[n] || ""} onSet={onSetPost} />
@@ -313,7 +324,7 @@ function WindowCanvas({ card, idx, total, brandLabel, year, ids, onSetPost }) {
 
 /* ---------- Scaled, framed page with action bar ---------- */
 function WindowPage(props) {
-  const { card, idx, total, brandLabel, year, onAnalyze, aiUnavailable, signalKeyword, onSetPost } = props;
+  const { card, idx, total, brandLabel, year, onAnalyze, aiUnavailable, signalKeyword, onSetPost, onLoadCreative } = props;
   const outer = _useR(null);
   const [scale, setScale] = _useS(0.5);
 
@@ -376,7 +387,8 @@ function WindowPage(props) {
       <div className={"wp-frame" + (card.analyzing ? " analyzing" : "")} ref={outer} style={{ height: DESIGN_H * scale }}>
         <div className="wp-scale" style={{ transform: `scale(${scale})`, width: DESIGN_W, height: DESIGN_H }}>
           <WindowCanvas card={card} idx={idx} total={total} brandLabel={brandLabel} year={year} ids={ids}
-            onSetPost={(slotIdx, url) => onSetPost && onSetPost(idx, slotIdx, url)} />
+            onSetPost={(slotIdx, url) => onSetPost && onSetPost(idx, slotIdx, url)}
+            onLoadCreative={() => onLoadCreative && onLoadCreative(idx)} />
         </div>
       </div>
     </div>
