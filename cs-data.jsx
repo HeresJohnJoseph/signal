@@ -107,15 +107,31 @@ async function fetchSheetTab(brandSel, filterMonth, filterYear) {
     return !rm || rm === targetMonth; /* include rows with no month set OR exact match */
   });
 
-  /* Tab has data, just not for the selected month — tell the user which months exist */
+  /* No exact-month rows but the tab has data:
+     - past/current period → fall back to the latest available month's rows
+     - future period → genuinely no data yet, tell the user what exists */
+  let result = matched;
   if (targetMonth && matched.length === 0 && namedRows.length > 0) {
-    const avail = [...new Set(namedRows
-      .map(r => ((monthCol >= 0 ? r[monthCol] : r[7]) || "").replace(/^"|"$/g, "").trim())
-      .filter(Boolean))];
-    if (avail.length) throw new Error(`No rows for ${MONTHS[filterMonth]} ${filterYear} — this tab has data for: ${avail.join(", ")}. Change the Reporting Period and run again.`);
+    const rowMonth = (r) => ((monthCol >= 0 ? r[monthCol] : r[7]) || "").replace(/^"|"$/g, "").trim();
+    const parseMY = (s) => {
+      const m = s.match(/^(\w+)\s+(\d{4})$/);
+      if (!m) return null;
+      const mi = MONTHS.findIndex(x => x.toLowerCase() === m[1].toLowerCase());
+      return mi >= 0 ? mi + Number(m[2]) * 12 : null;
+    };
+    const now = new Date();
+    const isFuture = (filterYear * 12 + filterMonth) > (now.getFullYear() * 12 + now.getMonth());
+    if (isFuture) {
+      const avail = [...new Set(namedRows.map(rowMonth).filter(Boolean))];
+      throw new Error(`No rows for ${MONTHS[filterMonth]} ${filterYear} yet — this tab has data for: ${avail.join(", ")}.`);
+    }
+    /* latest available month ≤ anything — pick the most recent labelled month, else take all rows */
+    const stamps = namedRows.map(r => parseMY(rowMonth(r)));
+    const best = Math.max(...stamps.filter(s => s !== null), -1);
+    result = best >= 0 ? namedRows.filter((r, i) => stamps[i] === best) : namedRows;
   }
 
-  return matched
+  return result
     .map(r => ({
       name:   (r[col('brand name')]  || "").replace(/^"|"$/g, "").trim(),
       fb:     (r[col('facebook')]    || "").replace(/^"|"$/g, "").trim(),
