@@ -15,6 +15,11 @@ function App() {
 
   const resetKey = () => { clearKey(); setApiKey(""); };
 
+  const isRateLimitErr = (e) => {
+    const m = (e.message || "").toLowerCase();
+    return m.includes("rate") || m.includes("quota") || m.includes("429");
+  };
+
   if (!apiKey) {
     return <SetupScreen onSave={(k) => setApiKey(k)} />;
   }
@@ -61,6 +66,20 @@ function App() {
           } catch (e) {
             console.error("Auto-analyze failed for", fetched[i].name, e);
             if (e.message?.toLowerCase().includes("leaked")) { resetKey(); return; }
+            if (isRateLimitErr(e)) {
+              /* silent retry: wait out the rate-limit window, try once more */
+              await new Promise(r => setTimeout(r, 65000));
+              try {
+                const res = await analyzeWindow(fetched[i], BRANDS[brandSel].name, month, year, apiKey, signalKeyword);
+                setCards(prev => prev.map((c, ci) => ci === i ? { ...c, analyzing: false, analyzed: true, snapshot: res.snapshot, themes: res.themes, insight: res.insight, sentiment: res.sentiment, postFrequency: res.postFrequency, effectivenessScore: res.effectivenessScore, executiveSummary: res.executiveSummary, keyCampaigns: res.keyCampaigns, contentSnapshot: res.contentSnapshot, creativeScores: res.creativeScores, whitespace: res.whitespace, recommendations: res.recommendations, signalMatch: res.signalMatch, signalNote: res.signalNote, signalLink: res.signalLink } : c));
+                continue;
+              } catch (e2) {
+                console.error("Retry failed for", fetched[i].name, e2);
+                if (e2.message?.toLowerCase().includes("leaked")) { resetKey(); return; }
+                setCards(prev => prev.map((c, ci) => ci === i ? { ...c, analyzing: false, analyzeError: e2.message } : c));
+                continue;
+              }
+            }
             setCards(prev => prev.map((c, ci) => ci === i ? { ...c, analyzing: false, analyzeError: e.message } : c));
           }
         }
@@ -83,6 +102,20 @@ function App() {
     } catch (e) {
       console.error("Analyze failed", e);
       if (e.message?.toLowerCase().includes("leaked")) { resetKey(); return; }
+      if (isRateLimitErr(e)) {
+        /* silent retry: wait out the rate-limit window, try once more */
+        await new Promise(r => setTimeout(r, 65000));
+        try {
+          const res = await analyzeWindow(card, brandLabel, month, year, apiKey, signalKeyword);
+          patchCard(ci, { analyzing: false, analyzed: true, snapshot: res.snapshot, themes: res.themes, insight: res.insight, sentiment: res.sentiment, postFrequency: res.postFrequency, effectivenessScore: res.effectivenessScore, executiveSummary: res.executiveSummary, keyCampaigns: res.keyCampaigns, contentSnapshot: res.contentSnapshot, creativeScores: res.creativeScores, whitespace: res.whitespace, recommendations: res.recommendations, signalMatch: res.signalMatch, signalNote: res.signalNote, signalLink: res.signalLink });
+          return;
+        } catch (e2) {
+          console.error("Retry failed", e2);
+          if (e2.message?.toLowerCase().includes("leaked")) { resetKey(); return; }
+          patchCard(ci, { analyzing: false, analyzeError: e2.message });
+          return;
+        }
+      }
       patchCard(ci, { analyzing: false, analyzeError: e.message });
     }
   };
