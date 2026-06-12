@@ -21,8 +21,8 @@ function App() {
   const [signalKeyword, setSignalKeyword] = useState(() => localStorage.getItem("cs_signal_kw") || "");
 
   const [brandSel, setBrandSel] = useState("hunters");
-  const [month, setMonth] = useState(3);   // April
-  const [year, setYear] = useState(2026);
+  const [month, setMonth] = useState(() => new Date().getMonth());
+  const [year, setYear] = useState(() => new Date().getFullYear());
   const [runState, setRunState] = useState("idle");
   const [fetchErr, setFetchErr] = useState(null);
   const [busy, setBusy] = useState(false);

@@ -100,13 +100,22 @@ async function fetchSheetTab(brandSel, filterMonth, filterYear) {
     ? `${MONTHS[filterMonth]} ${filterYear}`.toLowerCase()
     : null;
 
-  return dataRows
-    .filter(r => r[0] && r[0].replace(/^"|"$/g, "").trim())
-    .filter(r => {
-      if (!targetMonth) return true;
-      const rm = ((monthCol >= 0 ? r[monthCol] : r[7]) || "").replace(/^"|"$/g, "").trim().toLowerCase();
-      return !rm || rm === targetMonth; /* include rows with no month set OR exact match */
-    })
+  const namedRows = dataRows.filter(r => r[0] && r[0].replace(/^"|"$/g, "").trim());
+  const matched = namedRows.filter(r => {
+    if (!targetMonth) return true;
+    const rm = ((monthCol >= 0 ? r[monthCol] : r[7]) || "").replace(/^"|"$/g, "").trim().toLowerCase();
+    return !rm || rm === targetMonth; /* include rows with no month set OR exact match */
+  });
+
+  /* Tab has data, just not for the selected month — tell the user which months exist */
+  if (targetMonth && matched.length === 0 && namedRows.length > 0) {
+    const avail = [...new Set(namedRows
+      .map(r => ((monthCol >= 0 ? r[monthCol] : r[7]) || "").replace(/^"|"$/g, "").trim())
+      .filter(Boolean))];
+    if (avail.length) throw new Error(`No rows for ${MONTHS[filterMonth]} ${filterYear} — this tab has data for: ${avail.join(", ")}. Change the Reporting Period and run again.`);
+  }
+
+  return matched
     .map(r => ({
       name:   (r[col('brand name')]  || "").replace(/^"|"$/g, "").trim(),
       fb:     (r[col('facebook')]    || "").replace(/^"|"$/g, "").trim(),
