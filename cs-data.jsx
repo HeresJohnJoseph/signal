@@ -28,7 +28,15 @@ const BRANDS = {
 const BRAND_ORDER = Object.keys(BRANDS);
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const THEME_LABELS = ["Promotions", "Product", "Serves", "Seasonal", "Lifestyle"];
-const PLATS = ["Facebook", "Instagram", "X"];
+const PLATS = ["Facebook", "Instagram", "X", "TikTok", "Website"];
+/* Alcohol brands exclude TikTok for legal/regulatory reasons */
+function platsFor(brandSel) {
+  return BRANDS[brandSel]?.category === "alcohol"
+    ? ["Facebook", "Instagram", "X", "Website"]
+    : PLATS;
+}
+/* Social platforms only (posting frequency) — Website isn't a feed */
+function socialPlatsFor(brandSel) { return platsFor(brandSel).filter(p => p !== "Website"); }
 
 /* ---- Google Sheet tab names ---- */
 const SHEET_ID = "1zIEipR_aJMiDk9XoT7LmEnXu4yg6cNgF";
@@ -170,14 +178,14 @@ function deriveHandle(c) {
 
 function freshCard(c, color, parent, sourceTag) {
   return {
-    name: c.name, fb: c.fb || "", ig: c.ig || "", x: c.x || "", web: c.web || "",
+    name: c.name, fb: c.fb || "", ig: c.ig || "", x: c.x || "", tiktok: c.tiktok || "", web: c.web || "",
     handle: deriveHandle(c), note: c.note || "",
     color, parent, source: sourceTag || "synced",
-    snapshot: PLATS.map((p) => ({ platform: p, role: "", comment: "" })),
+    snapshot: platsFor(parent).map((p) => ({ platform: p, role: "", comment: "" })),
     themes: THEME_LABELS.map((l) => ({ label: l, value: 0 })),
     insight: "",
     sentiment: { positive: 0, neutral: 0, negative: 0 },
-    postFrequency: { Facebook: 0, Instagram: 0, X: 0 },
+    postFrequency: Object.fromEntries(socialPlatsFor(parent).map(p => [p, 0])),
     effectivenessScore: null,
     /* --- extended report fields --- */
     executiveSummary: "",
@@ -188,6 +196,7 @@ function freshCard(c, color, parent, sourceTag) {
     recommendations: "",
     signalMatch: false,
     signalNote: "",
+    signalLink: "",
     posts: ["", "", "", "", "", ""],
     analyzing: false, analyzed: false,
   };
@@ -324,16 +333,25 @@ function stripHi(text) {
 
 /* ---- analyzeWindow: grounded brand window analysis ---- */
 async function analyzeWindow(card, clientLabel, month, year, apiKey, signalKeyword) {
+  const plats = platsFor(card.parent);
+  const socialPlats = socialPlatsFor(card.parent);
+  const hasTikTok = plats.includes("TikTok");
+
   const handles = [
-    card.ig  && `Instagram: ${card.ig}`,
-    card.fb  && `Facebook: ${card.fb}`,
-    card.x   && `X/Twitter: ${card.x}`,
-    card.web && `Website: ${card.web}`,
+    card.ig     && `Instagram: ${card.ig}`,
+    card.fb     && `Facebook: ${card.fb}`,
+    card.x      && `X/Twitter: ${card.x}`,
+    card.tiktok && hasTikTok && `TikTok: ${card.tiktok}`,
+    card.web    && `Website: ${card.web}`,
   ].filter(Boolean).join("\n");
 
   const signalInstruction = signalKeyword
-    ? `\n10. SIGNAL DETECTION — Search specifically for any content by ${card.name} related to the keyword/theme "${signalKeyword}" during ${MONTHS[month]} ${year} (e.g. new product launch, flavour, campaign, collab). Set signalMatch:true if found and signalNote to a 1-2 sentence description. If not found, signalMatch:false and signalNote:"No matching content found."`
+    ? `\n10. SIGNAL DETECTION — Search specifically for any content by ${card.name} related to the keyword/theme "${signalKeyword}" during ${MONTHS[month]} ${year} (e.g. new product launch, flavour, campaign, collab). Set signalMatch:true if found, signalNote to a 1-2 sentence description, and signalLink to the URL of the specific post or article where it was found. If not found, signalMatch:false, signalNote:"No matching content found.", signalLink:"".`
     : "";
+
+  const snapshotRows = plats.map(p =>
+    `    {"platform":"${p}","role":"Primary|Light|Inactive","comment":"<=4 words"}`).join(",\n");
+  const freqRow = socialPlats.map(p => `"${p}":<est. posts/month>`).join(",");
 
   const prompt =
 `You are a senior brand strategist at John Joseph building a monthly competitor intelligence report for the South African alcohol brand "${clientLabel}".
@@ -343,7 +361,7 @@ ${handles ? `Search these channels for recent activity:\n${handles}` : ""}
 Reporting period: ${MONTHS[month]} ${year}.
 
 Search for:
-1. Platform activity and posting patterns on Facebook, Instagram, and X
+1. Platform activity and posting patterns on ${plats.join(", ")}${hasTikTok ? ". If the brand has no TikTok presence, set its TikTok role to Inactive with comment \"No TikTok presence\"" : ""}
 2. Recent campaigns, promotions, or product launches in South Africa
 3. Content themes and creative direction
 4. Audience sentiment and engagement signals
@@ -361,13 +379,11 @@ Then output EXACTLY this block:
 <chart_data>
 {
   "snapshot":[
-    {"platform":"Facebook","role":"Primary|Light|Inactive","comment":"<=4 words"},
-    {"platform":"Instagram","role":"Primary|Light|Inactive","comment":"<=4 words"},
-    {"platform":"X","role":"Primary|Light|Inactive","comment":"<=4 words"}
+${snapshotRows}
   ],
   "themes":{"Promotions":<0-100>,"Product":<0-100>,"Serves":<0-100>,"Seasonal":<0-100>,"Lifestyle":<0-100>},
   "sentiment":{"positive":<0-100>,"neutral":<0-100>,"negative":<0-100>},
-  "postFrequency":{"Facebook":<est. posts/month>,"Instagram":<est. posts/month>,"X":<est. posts/month>},
+  "postFrequency":{${freqRow}},
   "effectivenessScore":<1.0-10.0>,
   "executiveSummary":"2-3 sentence paragraph on their overall strategy this period",
   "keyCampaigns":[{"title":"Campaign name","description":"One sentence description"}],
@@ -376,7 +392,8 @@ Then output EXACTLY this block:
   "whitespace":"One sentence on their biggest missed opportunity",
   "recommendations":"One sentence action recommendation for ${clientLabel} to exploit",
   "signalMatch":<true|false>,
-  "signalNote":"Description of signal match OR No matching content found."
+  "signalNote":"Description of signal match OR No matching content found.",
+  "signalLink":"URL of the post/article where the signal was found, or empty string"
 }
 </chart_data>
 
@@ -402,7 +419,7 @@ RULES:
 
   const byPlat = {};
   (cd.snapshot || []).forEach(s => { if (s?.platform) byPlat[s.platform.toLowerCase()] = s; });
-  const snapshot = PLATS.map(p => {
+  const snapshot = plats.map(p => {
     const s = byPlat[p.toLowerCase()] || {};
     return { platform: p, role: titleRole(s.role), comment: String(s.comment || "").slice(0, 40) };
   });
@@ -415,11 +432,8 @@ RULES:
     neutral:  clampPct(rawSent.neutral),
     negative: clampPct(rawSent.negative),
   };
-  const postFrequency = {
-    Facebook:  Math.max(0, Math.round(Number(cd.postFrequency?.Facebook)  || 0)),
-    Instagram: Math.max(0, Math.round(Number(cd.postFrequency?.Instagram) || 0)),
-    X:         Math.max(0, Math.round(Number(cd.postFrequency?.X)         || 0)),
-  };
+  const postFrequency = Object.fromEntries(socialPlats.map(p =>
+    [p, Math.max(0, Math.round(Number(cd.postFrequency?.[p]) || 0))]));
   const effectivenessScore = cd.effectivenessScore
     ? Math.min(10, Math.max(0, Math.round(Number(cd.effectivenessScore) * 10) / 10))
     : null;
@@ -441,11 +455,13 @@ RULES:
   const recommendations = String(cd.recommendations || "").trim();
   const signalMatch = cd.signalMatch === true || String(cd.signalMatch).toLowerCase() === "true";
   const signalNote  = String(cd.signalNote || "").trim();
+  const rawLink = String(cd.signalLink || "").trim();
+  const signalLink = /^https?:\/\//.test(rawLink) ? rawLink : "";
 
   return {
     snapshot, themes, insight, sentiment, postFrequency, effectivenessScore,
     executiveSummary, keyCampaigns, contentSnapshot, creativeScores,
-    whitespace, recommendations, signalMatch, signalNote,
+    whitespace, recommendations, signalMatch, signalNote, signalLink,
   };
 }
 
@@ -778,7 +794,7 @@ async function generateReport(state) {
   ty += 26;
   state.cards.forEach((card, i) => {
     doc.setFillColor(...(i%2===0 ? [244,249,255] : [255,255,255])); doc.rect(PAD, ty, CW, 28, "F");
-    const tot = (card.postFrequency?.Facebook||0)+(card.postFrequency?.Instagram||0)+(card.postFrequency?.X||0);
+    const tot = Object.values(card.postFrequency || {}).reduce((a, b) => a + (b || 0), 0);
     const freq = tot > 0 ? (tot/30).toFixed(1) : "—";
     const topTh = [...card.themes].sort((a,b)=>b.value-a.value)[0]?.label || "—";
     const sent = card.sentiment?.positive > card.sentiment?.negative ? "Positive" : card.sentiment?.negative > 50 ? "Negative" : "Neutral";

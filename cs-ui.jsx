@@ -119,23 +119,59 @@ function PlatformSVG({ name, white }) {
     return (<svg viewBox="0 0 24 24" fill={fill}><path d="M14 9V7c0-1 .4-1.6 1.7-1.6H17V2.4h-2.5C11.6 2.4 10 4.2 10 6.9V9H8v3.1h2V22h3.6v-9.9H16l.5-3.1H14z"/></svg>);
   if (v === "instagram")
     return (<svg viewBox="0 0 24 24" fill="none" stroke={fill} strokeWidth="2"><rect x="3.5" y="3.5" width="17" height="17" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.3" cy="6.7" r="1.1" fill={fill} stroke="none"/></svg>);
+  if (v === "tiktok")
+    return (<svg viewBox="0 0 24 24" fill={fill}><path d="M16.6 3c.4 2.2 1.8 3.9 4 4.2v3.1c-1.5 0-2.9-.5-4-1.3v6.3c0 3.7-2.6 6.2-6 6.2-3.2 0-5.6-2.3-5.6-5.5 0-3.1 2.4-5.5 5.6-5.5.3 0 .7 0 1 .1v3.2c-.3-.1-.6-.2-1-.2-1.4 0-2.5 1.1-2.5 2.4 0 1.4 1.1 2.4 2.5 2.4 1.5 0 2.7-1.1 2.7-2.9V3h3.3z"/></svg>);
+  if (v === "website")
+    return (<svg viewBox="0 0 24 24" fill="none" stroke={fill} strokeWidth="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.7 2.6 4 5.7 4 9s-1.3 6.4-4 9c-2.7-2.6-4-5.7-4-9s1.3-6.4 4-9z"/></svg>);
   return (<svg viewBox="0 0 24 24" fill={fill}><path d="M3 3h4.5l4 5.6L16.4 3H21l-6.8 8.2L21.5 21H17l-4.4-6.1L7.2 21H3l7.2-8.6L3 3z"/></svg>);
 }
 
+function platColor(name) {
+  const v = name.toLowerCase();
+  if (v === "facebook")  return "#1877F2";
+  if (v === "instagram") return "#2B3A53";
+  if (v === "tiktok")    return "#161823";
+  if (v === "website")   return "#2E4B3F";
+  return "#15171A";
+}
+
 function PlatformChip({ name, active }) {
-  const bg = active
-    ? (name.toLowerCase() === "facebook" ? "#1877F2" : name.toLowerCase() === "instagram" ? "#2B3A53" : "#15171A")
-    : null;
   return (
-    <div className={"pf-chip " + (active ? "on" : "off")} style={active ? { background: bg } : undefined}>
+    <div className={"pf-chip " + (active ? "on" : "off")} style={active ? { background: platColor(name) } : undefined}>
       <PlatformSVG name={name} />
     </div>
   );
 }
 
 function SnapIcon({ name }) {
-  const bg = name.toLowerCase() === "facebook" ? "#1877F2" : name.toLowerCase() === "instagram" ? "#2B3A53" : "#15171A";
-  return (<span className="sp-ic" style={{ background: bg }}><PlatformSVG name={name} /></span>);
+  return (<span className="sp-ic" style={{ background: platColor(name) }}><PlatformSVG name={name} /></span>);
+}
+
+/* ---------- Signal badge with detail popup ---------- */
+function SignalBadge({ keyword, note, link, brand }) {
+  const [open, setOpen] = _useS(false);
+  return (
+    <span className="wb-signal-wrap">
+      <span className={"wb-signal clickable" + (open ? " open" : "")} onClick={() => setOpen(v => !v)} title="Click for details">
+        <span className="ws-dot">◉</span>
+        <span className="ws-lbl">Signal</span>
+        <span className="ws-kw">{keyword}</span>
+        <span className="ws-caret">{open ? "▴" : "▾"}</span>
+      </span>
+      {open && (
+        <div className="signal-pop" onClick={e => e.stopPropagation()}>
+          <div className="sp-head">
+            <span className="sp-title">Signal found · “{keyword}”</span>
+            <button className="sp-close" onClick={() => setOpen(false)}>✕</button>
+          </div>
+          <div className="sp-body"><Hi text={note || `${brand} ran content matching “${keyword}” this period.`} /></div>
+          {link
+            ? <a className="sp-link" href={link} target="_blank" rel="noopener noreferrer">View where it was found ↗</a>
+            : <div className="sp-nolink">No direct link captured — check the brand's profile links on the slide.</div>}
+        </div>
+      )}
+    </span>
+  );
 }
 
 /* ---------- The fixed template canvas ---------- */
@@ -242,6 +278,8 @@ function WindowCanvas({ card, idx, total, brandLabel, year, ids, onSetPost }) {
               {card.ig && <a href={card.ig} target="_blank" rel="noopener noreferrer" className="plink plink-ig" title="Open Instagram"><PlatformSVG name="Instagram" /></a>}
               {card.fb && <a href={card.fb} target="_blank" rel="noopener noreferrer" className="plink plink-fb" title="Open Facebook"><PlatformSVG name="Facebook" /></a>}
               {card.x  && <a href={card.x}  target="_blank" rel="noopener noreferrer" className="plink plink-x"  title="Open X"><PlatformSVG name="X" /></a>}
+              {card.tiktok && /^https?:/.test(card.tiktok) && <a href={card.tiktok} target="_blank" rel="noopener noreferrer" className="plink plink-tt" title="Open TikTok"><PlatformSVG name="TikTok" /></a>}
+              {card.web && <a href={card.web} target="_blank" rel="noopener noreferrer" className="plink plink-web" title="Open Website"><PlatformSVG name="Website" /></a>}
             </div>
           </div>
           <div className="post-grid">
@@ -309,11 +347,7 @@ function WindowPage(props) {
             </span>
           )}
           {card.signalMatch && signalKeyword && (
-            <span className="wb-signal" title={card.signalNote || "Signal match"}>
-              <span className="ws-dot">◉</span>
-              <span className="ws-lbl">Signal</span>
-              <span className="ws-kw">{signalKeyword}</span>
-            </span>
+            <SignalBadge keyword={signalKeyword} note={card.signalNote} link={card.signalLink} brand={card.name} />
           )}
         </div>
         <button className={"wp-analyze " + (card.analyzing ? "busy " : "") + (card.analyzed ? "done" : "")}
@@ -523,30 +557,41 @@ function CategorySlide({ cards, month, year, brandLabel }) {
         <div className="cat-card">
           <div className="cat-card-head"><span className="cat-ch-dot"></span>Platform Activity</div>
           <div className="cat-plat-table">
-            <div className="cpt-header">
-              <span className="cpt-corner"></span>
-              <span className="cpt-plat-h">Facebook</span>
-              <span className="cpt-plat-h">Instagram</span>
-              <span className="cpt-plat-h">X</span>
-            </div>
-            {analyzed.map(c => {
-              const pf = c.postFrequency || {};
-              const max = Math.max(1, pf.Facebook || 0, pf.Instagram || 0, pf.X || 0);
+            {(() => {
+              /* dynamic platform columns — union across analyzed cards (Website excluded; not a feed) */
+              const platCols = [];
+              analyzed.forEach(c => Object.keys(c.postFrequency || {}).forEach(p => {
+                if (p !== "Website" && !platCols.includes(p)) platCols.push(p);
+              }));
+              const gridCols = { gridTemplateColumns: `90px repeat(${platCols.length}, 1fr)` };
               return (
-                <div className="cpt-row" key={c.name}>
-                  <span className="cpt-brand" style={{ borderLeft: `3px solid ${c.color}` }}>{c.name.split(" ")[0]}</span>
-                  {["Facebook","Instagram","X"].map(plt => {
-                    const n = pf[plt] || 0;
+                <React.Fragment>
+                  <div className="cpt-header" style={gridCols}>
+                    <span className="cpt-corner"></span>
+                    {platCols.map(p => <span className="cpt-plat-h" key={p}>{p}</span>)}
+                  </div>
+                  {analyzed.map(c => {
+                    const pf = c.postFrequency || {};
+                    const max = Math.max(1, ...platCols.map(p => pf[p] || 0));
                     return (
-                      <div className="cpt-cell" key={plt}>
-                        <div className="cpt-bar-wrap"><div className="cpt-bar" style={{ height: (n / max * 100) + "%" }}></div></div>
-                        <span className="cpt-n">{n > 0 ? n : "–"}</span>
+                      <div className="cpt-row" key={c.name} style={gridCols}>
+                        <span className="cpt-brand" style={{ borderLeft: `3px solid ${c.color}` }}>{c.name.split(" ")[0]}</span>
+                        {platCols.map(plt => {
+                          const n = pf[plt] || 0;
+                          const na = !(plt in pf); /* platform not tracked for this brand (e.g. alcohol × TikTok) */
+                          return (
+                            <div className="cpt-cell" key={plt}>
+                              <div className="cpt-bar-wrap"><div className="cpt-bar" style={{ height: (n / max * 100) + "%" }}></div></div>
+                              <span className="cpt-n">{na ? "n/a" : (n > 0 ? n : "–")}</span>
+                            </div>
+                          );
+                        })}
                       </div>
                     );
                   })}
-                </div>
+                </React.Fragment>
               );
-            })}
+            })()}
           </div>
           <div className="cpt-footnote">Estimated posts · current month</div>
         </div>
