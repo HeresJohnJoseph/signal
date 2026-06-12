@@ -221,6 +221,26 @@ const GEMINI_URL   = `https://generativelanguage.googleapis.com/v1beta/models/${
 const LS_KEY = "signal_gemini_key";
 function getStoredKey() { return localStorage.getItem(LS_KEY) || ""; }
 
+/* ---- Shared team config from the tracker sheet's "Config" tab ----
+   Two columns: key | value. Recognised keys: apify_token, gemini_key.
+   Lets one person set keys for the whole team — no per-user prompts. */
+let _sharedConfig = null;
+async function fetchSharedConfig() {
+  if (_sharedConfig) return _sharedConfig;
+  try {
+    const res = await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Config`);
+    if (!res.ok) return (_sharedConfig = {});
+    const rows = parseCSV(await res.text());
+    const cfg = {};
+    rows.forEach(r => {
+      const k = (r[0] || "").replace(/^"|"$/g, "").trim().toLowerCase();
+      const v = (r[1] || "").replace(/^"|"$/g, "").trim();
+      if (k && v && ["apify_token", "gemini_key"].includes(k)) cfg[k] = v;
+    });
+    return (_sharedConfig = cfg);
+  } catch { return (_sharedConfig = {}); }
+}
+
 /* ---- Apify: auto-load Instagram creative into post slots ---- */
 function getApifyToken() { return localStorage.getItem('signal_apify_token') || ''; }
 function saveApifyToken(t) { localStorage.setItem('signal_apify_token', t); }

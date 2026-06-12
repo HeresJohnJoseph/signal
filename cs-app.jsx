@@ -129,6 +129,11 @@ function App() {
 
     let token = apifyToken;
     if (!token) {
+      /* shared team token from the sheet's Config tab — no prompt needed */
+      const cfg = await fetchSharedConfig();
+      if (cfg.apify_token) { token = cfg.apify_token; handleSetApifyToken(token); }
+    }
+    if (!token) {
       token = window.prompt("Paste your Apify API token to load social creative.\nGet one free at apify.com/sign-up:");
       if (!token?.trim()) return;
       handleSetApifyToken(token.trim());
@@ -271,7 +276,12 @@ function App() {
 /* Validate any stored key before rendering — a dead/leaked key is cleared
    automatically so the user lands on the setup screen instead of a broken app. */
 (async () => {
-  const k = getStoredKey();
+  let k = getStoredKey();
+  if (!k) {
+    /* no local key — try the shared team key from the sheet's Config tab */
+    const cfg = await fetchSharedConfig();
+    if (cfg.gemini_key) { saveKey(cfg.gemini_key); k = cfg.gemini_key; }
+  }
   if (k) {
     try {
       const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent", {
