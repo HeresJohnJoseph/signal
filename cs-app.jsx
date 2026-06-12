@@ -141,7 +141,8 @@ function App() {
       patchCard(ci, { loadingCreative: false });
     } catch (e) {
       console.error("Apify creative load failed", e);
-      patchCard(ci, { loadingCreative: false, creativeError: "Couldn't load creative — check your Apify token or try again." });
+      if ((e.message || "").includes("token rejected")) handleSetApifyToken("");
+      patchCard(ci, { loadingCreative: false, creativeError: e.message || "Couldn't load creative — try again." });
     }
   };
 

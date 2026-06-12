@@ -230,11 +230,12 @@ async function fetchApifyCreative(igUrl, apifyToken) {
   const handle = igUrl.replace(/.*instagram\.com\//, '').replace(/\/+$/, '').replace(/^@/, '');
   if (!handle) return [];
 
+  /* instagram-scraper needs ≥1GB memory; 256MB makes runs die instantly */
   const res = await fetch(
-    `https://api.apify.com/v2/acts/apify~instagram-scraper/run-sync-get-dataset-items?token=${apifyToken}&timeout=90&memory=256`,
+    `https://api.apify.com/v2/acts/apify~instagram-scraper/run-sync-get-dataset-items?timeout=240&memory=1024`,
     {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apifyToken },
       body: JSON.stringify({
         directUrls: [`https://www.instagram.com/${handle}/`],
         resultsType: 'posts',
@@ -244,11 +245,22 @@ async function fetchApifyCreative(igUrl, apifyToken) {
     }
   );
 
-  if (!res.ok) throw new Error('Apify error ' + res.status);
+  if (!res.ok) {
+    let msg = 'Apify error ' + res.status;
+    try {
+      const err = await res.json();
+      if (err?.error?.message) msg = `Apify (${res.status}): ${err.error.message}`;
+    } catch {}
+    if (res.status === 401) msg = "Apify token rejected — paste a valid token (apify.com → Settings → API & Integrations).";
+    if (res.status === 408) msg = "Instagram scrape timed out — try again in a moment.";
+    throw new Error(msg);
+  }
   const items = await res.json();
+  if (!Array.isArray(items)) throw new Error("Apify returned no posts for @" + handle);
   return items
+    .filter(p => !p.error)
     .slice(0, 6)
-    .map(p => p.displayUrl || p.imageUrl || p.thumbnailUrl || '')
+    .map(p => p.displayUrl || p.imageUrl || p.thumbnailUrl || (Array.isArray(p.images) ? p.images[0] : '') || '')
     .filter(Boolean);
 }
 function saveKey(k) { localStorage.setItem(LS_KEY, k.trim()); }
