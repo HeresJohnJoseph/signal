@@ -25,6 +25,16 @@
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
 </head>
 <body>
+<script>
+  /* Registration gate — unregistered visitors go to signup first */
+  (function() {
+    if (!localStorage.getItem('signal_registered')) {
+      var ref = new URLSearchParams(window.location.search).get('ref');
+      var dest = 'signup.html' + (ref ? '?ref=' + encodeURIComponent(ref) : '');
+      window.location.replace(dest);
+    }
+  })();
+</script>
 <div id="root"></div>
 
 <script type="text/babel" src="cs-data.jsx?v=20260612h"></script>

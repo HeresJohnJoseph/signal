@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Signal — Request Access</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Inter:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+
+<style>
+  :root {
+    --bg:        #0C0F16;
+    --surface:   #131720;
+    --surface-2: #1A1F2E;
+    --border:    rgba(255,255,255,0.07);
+    --border-2:  rgba(255,255,255,0.12);
+    --accent:    #FF5500;
+    --accent-lt: #FF7A3D;
+    --accent-dim: rgba(255,85,0,0.18);
+    --text-1:    #EEF1F8;
+    --text-2:    #8892A4;
+    --text-3:    #4C5669;
+    --red:       #EF4444;
+    --serif: 'Playfair Display', Georgia, serif;
+    --sans:  'Inter', system-ui, sans-serif;
+    --mono:  'Space Mono', ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; min-height: 100%;
+    font-family: var(--sans);
+    background: var(--bg); color: var(--text-1);
+    -webkit-font-smoothing: antialiased;
+  }
+  body { display: flex; align-items: center; justify-content: center; padding: 32px 16px; min-height: 100vh; }
+
+  .card {
+    width: 100%; max-width: 480px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 44px 40px 36px;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.04), 0 32px 80px rgba(0,0,0,0.6);
+    text-align: center;
+  }
+  .brandmark {
+    width: 44px; height: 44px; border-radius: 12px; margin: 0 auto 18px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-lt) 100%);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; color: #fff;
+    box-shadow: 0 8px 32px -8px rgba(255,85,0,0.4);
+  }
+  h1 { font-family: var(--serif); font-size: 30px; font-weight: 700; margin: 0 0 8px; letter-spacing: -0.01em; }
+  .subline {
+    font-family: var(--mono); font-size: 9px; letter-spacing: 0.24em;
+    text-transform: uppercase; color: var(--text-3); margin-bottom: 28px;
+  }
+  .divider { height: 1px; background: var(--border); margin: 0 0 28px; }
+
+  /* step 1 */
+  #step1 p { font-size: 13.5px; line-height: 1.65; color: var(--text-2); margin: 0 0 24px; }
+  #google-btn { display: flex; justify-content: center; }
+
+  /* step 2 */
+  #step2 { display: none; text-align: left; }
+  .profile {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 12px 14px; margin-bottom: 22px;
+  }
+  .profile img { width: 38px; height: 38px; border-radius: 50%; }
+  .profile .p-name { font-size: 13.5px; font-weight: 700; color: var(--text-1); }
+  .profile .p-email { font-size: 11.5px; color: var(--text-2); margin-top: 1px; }
+
+  label {
+    display: block; font-family: var(--mono); font-size: 8.5px;
+    letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-3);
+    margin: 0 0 7px;
+  }
+  .field { margin-bottom: 18px; }
+  input[type="text"], select {
+    width: 100%; padding: 11px 13px; border-radius: 9px;
+    border: 1px solid var(--border); background: var(--surface-2);
+    color: var(--text-1); font-family: var(--sans); font-size: 13px;
+    outline: none; appearance: none; transition: border-color .15s, box-shadow .15s;
+  }
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%234C5669' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 13px center; padding-right: 32px; cursor: pointer;
+  }
+  select:invalid { color: var(--text-3); }
+  input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+  input::placeholder { color: var(--text-3); }
+  option { background: var(--surface-2); color: var(--text-1); }
+
+  .submit {
+    width: 100%; margin-top: 8px; padding: 14px 16px; border: none; border-radius: 10px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-lt) 100%);
+    color: #fff; font-family: var(--sans); font-size: 13px; font-weight: 700;
+    letter-spacing: 0.06em; cursor: pointer;
+    box-shadow: 0 8px 32px -8px rgba(255,85,0,0.4);
+    transition: filter .15s, transform .12s;
+  }
+  .submit:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-1px); }
+  .submit:disabled { opacity: 0.6; cursor: wait; transform: none; }
+
+  .err {
+    display: none; margin-top: 14px; padding: 10px 14px;
+    background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.3);
+    border-radius: 9px; font-size: 12px; color: #fca5a5; text-align: center;
+  }
+  .foot {
+    margin-top: 24px; font-size: 10.5px; color: var(--text-3); text-align: center; line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="brandmark">◈</div>
+  <h1>Signal — Request Access</h1>
+  <div class="subline">Brand &amp; Competitor Intelligence · Private Beta</div>
+  <div class="divider"></div>
+
+  <!-- STEP 1 — Google sign-in -->
+  <div id="step1">
+    <p>Sign in with Google to request access to Signal. We'll ask a couple of quick questions, then you're in.</p>
+    <div id="google-btn"></div>
+  </div>
+
+  <!-- STEP 2 — follow-up questions -->
+  <form id="step2" novalidate>
+    <div class="profile">
+      <img id="p-pic" src="" alt="" referrerpolicy="no-referrer" />
+      <div>
+        <div class="p-name" id="p-name"></div>
+        <div class="p-email" id="p-email"></div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="company_role">Company &amp; Role</label>
+      <input type="text" id="company_role" placeholder="e.g. Freelance Brand Strategist at ACME Agency" />
+    </div>
+
+    <div class="field">
+      <label for="industry">Industry you work in</label>
+      <select id="industry" required>
+        <option value="" disabled selected>Select your industry…</option>
+        <option>Alcohol &amp; Beverages</option>
+        <option>QSR / Fast Food</option>
+        <option>Retail &amp; E-Commerce</option>
+        <option>Telecoms</option>
+        <option>Beauty &amp; Cosmetics</option>
+        <option>Skincare</option>
+        <option>Haircare</option>
+        <option>Other</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="team_size">Team size</label>
+      <select id="team_size" required>
+        <option value="" disabled selected>Select team size…</option>
+        <option>Just me (freelancer / consultant)</option>
+        <option>2–5 people</option>
+        <option>6–20 people</option>
+        <option>20+ people</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="report_time">How long do social media reports take you each month?</label>
+      <select id="report_time" required>
+        <option value="" disabled selected>Select time spent…</option>
+        <option>Less than 1 hour</option>
+        <option>1–3 hours</option>
+        <option>3–5 hours</option>
+        <option>5–10 hours</option>
+        <option>More than 10 hours</option>
+      </select>
+    </div>
+
+    <button type="submit" class="submit" id="submit-btn">Get Access to Signal →</button>
+    <div class="err" id="err-box">Something went wrong — please try again.</div>
+  </form>
+
+  <div class="foot">Your details are only used to set up your Signal access.<br/>No spam, ever.</div>
+</div>
+
+<script>
+  var GOOGLE_CLIENT_ID = 'REPLACE_WITH_YOUR_GOOGLE_CLIENT_ID';
+  var APPS_SCRIPT_URL  = 'REPLACE_WITH_YOUR_APPS_SCRIPT_URL';
+
+  /* Already registered? Straight into the app. */
+  if (localStorage.getItem('signal_registered')) {
+    window.location.replace('competitor-snapshot.html');
+  }
+
+  /* Capture ?ref= for attribution */
+  (function () {
+    var ref = new URLSearchParams(window.location.search).get('ref');
+    if (ref) localStorage.setItem('signal_ref', ref);
+  })();
+
+  var googleUser = null;
+
+  function handleGoogleSignIn(response) {
+    try {
+      var payload = JSON.parse(atob(response.credential.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+      googleUser = { name: payload.name || '', email: payload.email || '', picture: payload.picture || '' };
+      document.getElementById('p-pic').src = googleUser.picture;
+      document.getElementById('p-name').textContent = googleUser.name;
+      document.getElementById('p-email').textContent = googleUser.email;
+      document.getElementById('step1').style.display = 'none';
+      document.getElementById('step2').style.display = 'block';
+    } catch (e) {
+      console.error('Google sign-in parse failed', e);
+    }
+  }
+
+  function initGoogle() {
+    if (!window.google || !google.accounts) { setTimeout(initGoogle, 200); return; }
+    google.accounts.id.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: handleGoogleSignIn,
+      auto_select: false,
+    });
+    google.accounts.id.renderButton(
+      document.getElementById('google-btn'),
+      { theme: 'filled_black', size: 'large', width: 320, text: 'continue_with' }
+    );
+  }
+  initGoogle();
+
+  document.getElementById('step2').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var errBox = document.getElementById('err-box');
+    errBox.style.display = 'none';
+
+    var companyRole = document.getElementById('company_role').value.trim();
+    var industry    = document.getElementById('industry').value;
+    var teamSize    = document.getElementById('team_size').value;
+    var reportTime  = document.getElementById('report_time').value;
+
+    if (!companyRole || !industry || !teamSize || !reportTime) {
+      errBox.textContent = 'Please fill in all the fields above.';
+      errBox.style.display = 'block';
+      return;
+    }
+
+    var btn = document.getElementById('submit-btn');
+    btn.disabled = true;
+    btn.textContent = 'Getting you in…';
+
+    var ref = localStorage.getItem('signal_ref')
+      || new URLSearchParams(window.location.search).get('ref')
+      || '';
+
+    var payload = {
+      name: googleUser ? googleUser.name : '',
+      email: googleUser ? googleUser.email : '',
+      company_role: companyRole,
+      industry: industry,
+      team_size: teamSize,
+      report_time: reportTime,
+      referral_source: ref,
+      timestamp: new Date().toISOString(),
+    };
+
+    try {
+      /* text/plain avoids a CORS preflight, which Apps Script web apps can't answer */
+      var res = await fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      localStorage.setItem('signal_registered', 'true');
+      window.location.href = 'competitor-snapshot.html';
+    } catch (err) {
+      console.error('Signup POST failed', err);
+      errBox.textContent = 'Something went wrong — please try again.';
+      errBox.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Get Access to Signal →';
+    }
+  });
+</script>
+</body>
+</html>
