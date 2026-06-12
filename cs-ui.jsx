@@ -772,9 +772,16 @@ function Sidebar(props) {
         <div className="sb-block">
           <div className="step-eyebrow"><span className="num">01</span><span className="lbl">Select Brand</span></div>
           <div className="brand-list">
-            {brandRow("hunters", "Hunters", colors.hunters)}
-            {brandRow("amarula", "Amarula", colors.amarula)}
-            {brandRow("bernini", "Bernini", colors.bernini)}
+            {Object.entries(BRAND_CATEGORIES).map(([catKey, catMeta]) => {
+              const brandsInCat = Object.values(BRANDS).filter(b => b.category === catKey);
+              if (!brandsInCat.length) return null;
+              return (
+                <div key={catKey} className="brand-group">
+                  <div className="brand-group-label">{catMeta.label}</div>
+                  {brandsInCat.map(b => brandRow(b.key, b.name, colors[b.key] || b.color))}
+                </div>
+              );
+            })}
           </div>
         </div>
 

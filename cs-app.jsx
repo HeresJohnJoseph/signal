@@ -4,7 +4,11 @@
 const { useState, useRef } = React;
 
 function App() {
-  const colors = { amarula: "#C8860A", bernini: "#4A7FB5", hunters: "#2E6B2F" };
+  const colors = {
+    amarula:  "#C8860A", bernini:  "#4A7FB5", hunters:  "#2E6B2F",
+    qsr:      "#E87722", retail:   "#0071CE", telecoms: "#E60000",
+    beauty:   "#D4498F", skincare: "#7BC8A4", haircare: "#9B59B6",
+  };
 
   const [apiKey, setApiKey] = useState(() => getStoredKey());
   const aiUnavailable = false;

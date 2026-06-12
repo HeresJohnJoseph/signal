@@ -1,0 +1,5 @@
+.claude/
+*.mp4
+thumbnail.png
+proxy-server.js
+versions/

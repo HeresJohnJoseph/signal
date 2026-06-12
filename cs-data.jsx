@@ -4,12 +4,28 @@
    Source: Competitor Social Media Tracker (Google Sheet)
    ============================================================ */
 
-const BRANDS = {
-  amarula: { key: 'amarula', name: 'Amarula', color: '#C8860A', cat: 'Cream Liqueur' },
-  bernini: { key: 'bernini', name: 'Bernini', color: '#4A7FB5', cat: 'Sparkling Grape Beverage' },
-  hunters: { key: 'hunters', name: 'Hunters', color: '#2E6B2F', cat: 'Cider' },
+const BRAND_CATEGORIES = {
+  alcohol:  { label: "Alcohol",      color: "#2E6B2F" },
+  qsr:      { label: "QSR",          color: "#E87722" },
+  retail:   { label: "Retail",       color: "#0071CE" },
+  telecoms: { label: "Telecoms",     color: "#E60000" },
+  beauty:   { label: "Beauty",       color: "#D4498F" },
+  skincare: { label: "Skincare",     color: "#7BC8A4" },
+  haircare: { label: "Haircare",     color: "#9B59B6" },
 };
-const BRAND_ORDER = ['hunters', 'amarula', 'bernini'];
+
+const BRANDS = {
+  hunters:  { key: 'hunters',  name: 'Hunters',  color: '#2E6B2F', cat: 'Cider',                      category: 'alcohol' },
+  amarula:  { key: 'amarula',  name: 'Amarula',  color: '#C8860A', cat: 'Cream Liqueur',               category: 'alcohol' },
+  bernini:  { key: 'bernini',  name: 'Bernini',  color: '#4A7FB5', cat: 'Sparkling Grape Beverage',    category: 'alcohol' },
+  qsr:      { key: 'qsr',      name: 'QSR',      color: '#E87722', cat: 'Quick Service Restaurant',    category: 'qsr'     },
+  retail:   { key: 'retail',   name: 'Retail',   color: '#0071CE', cat: 'Retail & E-Commerce',         category: 'retail'  },
+  telecoms: { key: 'telecoms', name: 'Telecoms', color: '#E60000', cat: 'Telecommunications',          category: 'telecoms'},
+  beauty:   { key: 'beauty',   name: 'Beauty',   color: '#D4498F', cat: 'Beauty & Cosmetics',          category: 'beauty'  },
+  skincare: { key: 'skincare', name: 'Skincare', color: '#7BC8A4', cat: 'Skincare',                    category: 'skincare'},
+  haircare: { key: 'haircare', name: 'Haircare', color: '#9B59B6', cat: 'Haircare',                    category: 'haircare'},
+};
+const BRAND_ORDER = Object.keys(BRANDS);
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const THEME_LABELS = ["Promotions", "Product", "Serves", "Seasonal", "Lifestyle"];
 const PLATS = ["Facebook", "Instagram", "X"];
@@ -17,9 +33,15 @@ const PLATS = ["Facebook", "Instagram", "X"];
 /* ---- Google Sheet tab names ---- */
 const SHEET_ID = "1zIEipR_aJMiDk9XoT7LmEnXu4yg6cNgF";
 const SHEET_TABS = {
-  hunters: "Hunters Competitor Links",
-  amarula: "Amarula Competitor Links",
-  bernini: "Bernini Competitor Links",
+  hunters:  "Hunters Competitor Links",
+  amarula:  "Amarula Competitor Links",
+  bernini:  "Bernini Competitor Links",
+  qsr:      "QSR Competitor Links",
+  retail:   "Retail Competitor Links",
+  telecoms: "Telecoms Competitor Links",
+  beauty:   "Beauty Competitor Links",
+  skincare: "Skincare Competitor Links",
+  haircare: "Haircare Competitor Links",
 };
 
 /* parseCSV: handles quoted fields with commas */
@@ -43,9 +65,15 @@ function parseCSV(text) {
 
 /* gid known → use export CSV (clean output); no gid → gviz by sheet name */
 const SHEET_GIDS = {
-  hunters: "1889059569",
-  amarula: null,          /* use gviz by name — gid not yet resolved */
-  bernini: "2060771197",
+  hunters:  "1889059569",
+  amarula:  null,          /* null → gviz by tab name */
+  bernini:  "2060771197",
+  qsr:      null,
+  retail:   null,
+  telecoms: null,
+  beauty:   null,
+  skincare: null,
+  haircare: null,
 };
 
 async function fetchSheetTab(brandSel, filterMonth, filterYear) {
@@ -63,7 +91,11 @@ async function fetchSheetTab(brandSel, filterMonth, filterYear) {
   const hIdx = rows.findIndex(r => (r[0] || "").replace(/^"|"$/g, "").trim().toLowerCase() === "brand name");
   const dataRows = hIdx >= 0 ? rows.slice(hIdx + 1) : rows.slice(1);
 
-  /* Filter by Reporting Month column (index 7) if month/year provided */
+  /* Header-aware column detection — tabs may order columns differently */
+  const headers = (rows[hIdx] || []).map(h => h.replace(/^"|"$/g, "").trim().toLowerCase());
+  const col = (name) => { const i = headers.indexOf(name.toLowerCase()); return i >= 0 ? i : -1; };
+  const monthCol = col('reporting month');
+
   const targetMonth = (filterMonth !== undefined && filterYear !== undefined)
     ? `${MONTHS[filterMonth]} ${filterYear}`.toLowerCase()
     : null;
@@ -72,15 +104,16 @@ async function fetchSheetTab(brandSel, filterMonth, filterYear) {
     .filter(r => r[0] && r[0].replace(/^"|"$/g, "").trim())
     .filter(r => {
       if (!targetMonth) return true;
-      const rm = (r[7] || "").replace(/^"|"$/g, "").trim().toLowerCase();
+      const rm = ((monthCol >= 0 ? r[monthCol] : r[7]) || "").replace(/^"|"$/g, "").trim().toLowerCase();
       return !rm || rm === targetMonth; /* include rows with no month set OR exact match */
     })
     .map(r => ({
-      name: r[0].replace(/^"|"$/g, "").trim(),
-      fb:   (r[1] || "").replace(/^"|"$/g, "").trim(),
-      ig:   (r[2] || "").replace(/^"|"$/g, "").trim(),
-      x:    (r[3] || "").replace(/^"|"$/g, "").trim(),
-      web:  (r[4] || "").replace(/^"|"$/g, "").trim(),
+      name:   (r[col('brand name')]  || "").replace(/^"|"$/g, "").trim(),
+      fb:     (r[col('facebook')]    || "").replace(/^"|"$/g, "").trim(),
+      ig:     (r[col('instagram')]   || "").replace(/^"|"$/g, "").trim(),
+      x:      (r[col('x')]           || "").replace(/^"|"$/g, "").trim(),
+      tiktok: col('tiktok') >= 0 ? (r[col('tiktok')] || "").replace(/^"|"$/g, "").trim() : "",
+      web:    (r[col('website')]     || "").replace(/^"|"$/g, "").trim(),
     }));
 }
 
