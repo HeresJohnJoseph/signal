@@ -65,6 +65,28 @@
   #step1 p { font-size: 13.5px; line-height: 1.65; color: var(--text-2); margin: 0 0 24px; }
   #google-btn { display: flex; justify-content: center; }
 
+  .beta-badge {
+    display: inline-block; margin-bottom: 20px;
+    padding: 5px 12px; border: 1px solid var(--border-2); border-radius: 20px;
+    font-family: var(--mono); font-size: 9px; font-weight: 700;
+    letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-3);
+  }
+  .explainer {
+    font-size: 13px; line-height: 1.7; color: var(--text-2);
+    margin: 0 0 22px; text-align: center;
+  }
+  .benefits { list-style: none; margin: 0 0 26px; padding: 0; text-align: left; }
+  .benefits li {
+    display: flex; align-items: flex-start; gap: 10px;
+    font-size: 12.5px; line-height: 1.55; color: #888;
+    padding: 7px 4px;
+  }
+  .benefits li .b-arrow { color: var(--accent); flex-shrink: 0; font-weight: 700; }
+  .access-note {
+    font-size: 12px; font-style: italic; line-height: 1.6;
+    color: #666; margin: 0 0 22px; text-align: center;
+  }
+
   /* step 2 */
   #step2 { display: none; text-align: left; }
   .profile {
@@ -128,7 +150,14 @@
 
   <!-- STEP 1 — Google sign-in -->
   <div id="step1">
-    <p>Sign in with Google to request access to Signal. We'll ask a couple of quick questions, then you're in.</p>
+    <div class="beta-badge">Private Beta · Invite Only</div>
+    <p class="explainer">Signal automates competitor analysis and social reporting for brands. Pull data across Instagram, Facebook, TikTok, and the web — analysed by AI, exportable to a presentation-ready report. What used to take hours takes minutes.</p>
+    <ul class="benefits">
+      <li><span class="b-arrow">→</span><span>Full competitor social snapshots, auto-generated</span></li>
+      <li><span class="b-arrow">→</span><span>AI-written strategic analysis per competitor</span></li>
+      <li><span class="b-arrow">→</span><span>Export to PPT — ready to present, no extra work</span></li>
+    </ul>
+    <p class="access-note">Access is by invitation only. Sign in with your Google account to request your spot — we'll confirm access within 24 hours.</p>
     <div id="google-btn"></div>
   </div>
 
