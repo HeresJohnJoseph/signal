@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Signal — Design System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Inter:wght@400;500;600;700;800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg:#0C0F16; --surface:#131720; --surface-2:#1A1F2E; --surface-3:#212639;
+    --card:#1C2130; --border:rgba(255,255,255,0.07); --border-2:rgba(255,255,255,0.12);
+    --accent:#FF5500; --accent-lt:#FF7A3D; --accent-dim:rgba(255,85,0,0.18);
+    --green:#22C55E; --yellow:#F5A623; --red:#EF4444;
+    --text-1:#EEF1F8; --text-2:#8892A4; --text-3:#4C5669;
+    --serif:'Playfair Display',Georgia,serif; --sans:'Inter',system-ui,sans-serif; --mono:'Space Mono',ui-monospace,monospace;
+    --sh-accent:0 8px 32px -8px rgba(255,85,0,0.4);
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text-1); font-family:var(--sans); -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:1080px; margin:0 auto; padding:56px 48px 80px; }
+
+  /* header */
+  .gs-head { display:flex; align-items:center; gap:16px; margin-bottom:8px; }
+  .gs-mark { width:48px; height:48px; border-radius:13px; background:linear-gradient(135deg,var(--accent),var(--accent-lt)); display:flex; align-items:center; justify-content:center; font-size:22px; box-shadow:var(--sh-accent); }
+  .gs-title { font-family:var(--serif); font-weight:700; font-size:38px; letter-spacing:-0.01em; }
+  .gs-sub { font-family:var(--mono); font-size:10px; letter-spacing:0.26em; text-transform:uppercase; color:var(--text-3); margin:0 0 0 64px; }
+  .gs-rule { height:1px; background:var(--border); margin:36px 0 44px; }
+
+  /* section */
+  .sec { margin-bottom:52px; }
+  .sec-eyebrow { display:flex; align-items:center; gap:10px; margin-bottom:20px; }
+  .sec-eyebrow .dot { width:8px; height:8px; border-radius:50%; background:var(--accent); }
+  .sec-eyebrow .lbl { font-family:var(--sans); font-size:13px; font-weight:800; letter-spacing:0.18em; text-transform:uppercase; color:var(--text-1); }
+
+  /* swatches */
+  .swatch-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:14px; }
+  .swatch { border-radius:12px; border:1px solid var(--border); overflow:hidden; background:var(--surface); }
+  .swatch .chip { height:70px; }
+  .swatch .meta { padding:9px 12px 11px; }
+  .swatch .name { font-size:11.5px; font-weight:700; color:var(--text-1); }
+  .swatch .hex { font-family:var(--mono); font-size:10px; color:var(--text-2); margin-top:2px; text-transform:uppercase; }
+  .swatch .role { font-size:10px; color:var(--text-3); margin-top:3px; }
+
+  /* type scale */
+  .type-row { display:flex; align-items:baseline; gap:20px; padding:14px 0; border-bottom:1px solid var(--border); }
+  .type-row:last-child { border-bottom:none; }
+  .type-spec { font-family:var(--mono); font-size:10px; color:var(--text-3); width:160px; flex-shrink:0; line-height:1.5; }
+  .type-spec b { color:var(--text-2); font-weight:700; }
+
+  /* component cards */
+  .demo-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:18px; }
+  .demo { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:22px; box-shadow:0 8px 24px rgba(0,0,0,0.3); }
+  .demo-cap { font-family:var(--mono); font-size:9px; letter-spacing:0.16em; text-transform:uppercase; color:var(--text-3); margin-bottom:16px; }
+
+  .btn-primary { padding:12px 18px; border:none; border-radius:10px; background:linear-gradient(135deg,var(--accent),var(--accent-lt)); color:#fff; font-family:var(--sans); font-size:12px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; box-shadow:var(--sh-accent); cursor:default; }
+  .btn-ghost { padding:11px 16px; border:1px solid var(--border); border-radius:10px; background:var(--surface-2); color:var(--text-2); font-family:var(--sans); font-size:11px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; cursor:default; }
+  .btn-accent-soft { padding:10px 14px; border:1px solid rgba(255,85,0,0.3); border-radius:10px; background:var(--accent-dim); color:var(--accent-lt); font-family:var(--sans); font-size:10.5px; font-weight:700; letter-spacing:0.06em; cursor:default; }
+
+  .badge { display:inline-block; padding:5px 12px; border:1px solid var(--border-2); border-radius:20px; font-family:var(--mono); font-size:9px; font-weight:700; letter-spacing:0.2em; text-transform:uppercase; color:var(--text-3); }
+  .badge-live { border-color:rgba(34,197,94,0.4); color:var(--green); }
+  .badge-signal { display:inline-flex; align-items:center; gap:5px; background:var(--yellow-dim,rgba(245,166,35,0.18)); border:1px solid rgba(245,166,35,0.35); border-radius:6px; padding:3px 9px; }
+  .badge-signal .d { color:var(--yellow); font-size:10px; }
+  .badge-signal .t { font-size:9.5px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-2); }
+  .badge-signal .k { font-size:9.5px; color:var(--yellow); }
+  .score { display:inline-flex; align-items:center; gap:5px; padding:4px 11px; border-radius:20px; background:var(--accent-dim); border:1px solid rgba(255,85,0,0.25); font-family:var(--mono); font-size:12px; font-weight:700; color:var(--accent-lt); }
+  .score .dm { color:var(--text-3); font-size:9.5px; }
+
+  .bar-track { height:11px; border-radius:999px; background:rgba(255,255,255,0.07); overflow:hidden; margin-bottom:11px; }
+  .bar-fill { height:100%; border-radius:999px; background:linear-gradient(90deg,var(--accent-lt),var(--accent)); }
+  .sent-bar { display:flex; height:10px; border-radius:999px; overflow:hidden; gap:2px; }
+  .sent-bar i { display:block; }
+  .sent-pos { background:linear-gradient(90deg,#16a34a,#22c55e); }
+  .sent-neu { background:linear-gradient(90deg,#374151,#4b5563); }
+  .sent-neg { background:linear-gradient(90deg,#b91c1c,#ef4444); }
+
+  .inp { width:100%; padding:11px 13px; border-radius:9px; border:1px solid var(--border); background:var(--surface-2); color:var(--text-1); font-family:var(--sans); font-size:13px; }
+  .inp::placeholder { color:var(--text-3); }
+  .hi { color:var(--accent-lt); font-weight:800; }
+
+  .row { display:flex; flex-wrap:wrap; gap:12px; align-items:center; }
+  .label-demo { font-family:var(--mono); font-size:8.5px; letter-spacing:0.18em; text-transform:uppercase; color:var(--text-3); margin-bottom:7px; }
+
+  /* radii + shadow */
+  .tok-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:14px; }
+  .tok { background:var(--surface); border:1px solid var(--border); padding:16px; text-align:center; }
+  .tok .box { height:54px; background:var(--surface-3); border:1px solid var(--border-2); margin-bottom:10px; }
+  .tok .n { font-family:var(--mono); font-size:10px; color:var(--text-2); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="gs-head">
+    <div class="gs-mark">◈</div>
+    <div class="gs-title">Signal — Design System</div>
+  </div>
+  <div class="gs-sub">Brand &amp; Competitor Intelligence · Visual Language v1</div>
+  <div class="gs-rule"></div>
+
+  <!-- COLOR -->
+  <div class="sec">
+    <div class="sec-eyebrow"><span class="dot"></span><span class="lbl">Color · Surfaces</span></div>
+    <div class="swatch-grid">
+      <div class="swatch"><div class="chip" style="background:#0C0F16"></div><div class="meta"><div class="name">bg</div><div class="hex">#0C0F16</div><div class="role">App background</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#131720"></div><div class="meta"><div class="name">surface</div><div class="hex">#131720</div><div class="role">Sidebar, cards</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#1A1F2E"></div><div class="meta"><div class="name">surface-2</div><div class="hex">#1A1F2E</div><div class="role">Inputs, raised</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#212639"></div><div class="meta"><div class="name">surface-3</div><div class="hex">#212639</div><div class="role">Selected state</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#1C2130"></div><div class="meta"><div class="name">card</div><div class="hex">#1C2130</div><div class="role">Canvas cards</div></div></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-eyebrow"><span class="dot"></span><span class="lbl">Color · Accent &amp; Semantic</span></div>
+    <div class="swatch-grid">
+      <div class="swatch"><div class="chip" style="background:#FF5500"></div><div class="meta"><div class="name">accent</div><div class="hex">#FF5500</div><div class="role">Primary orange</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#FF7A3D"></div><div class="meta"><div class="name">accent-lt</div><div class="hex">#FF7A3D</div><div class="role">Gradient end · highlights</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#22C55E"></div><div class="meta"><div class="name">green</div><div class="hex">#22C55E</div><div class="role">Positive sentiment</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#F5A623"></div><div class="meta"><div class="name">yellow</div><div class="hex">#F5A623</div><div class="role">Signal · light role</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#EF4444"></div><div class="meta"><div class="name">red</div><div class="hex">#EF4444</div><div class="role">Negative · errors</div></div></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-eyebrow"><span class="dot"></span><span class="lbl">Color · Text &amp; Category dots</span></div>
+    <div class="swatch-grid">
+      <div class="swatch"><div class="chip" style="background:#EEF1F8"></div><div class="meta"><div class="name">text-1</div><div class="hex">#EEF1F8</div><div class="role">Primary text</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#8892A4"></div><div class="meta"><div class="name">text-2</div><div class="hex">#8892A4</div><div class="role">Secondary text</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#4C5669"></div><div class="meta"><div class="name">text-3</div><div class="hex">#4C5669</div><div class="role">Muted · labels</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#E87722"></div><div class="meta"><div class="name">qsr</div><div class="hex">#E87722</div><div class="role">QSR</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#0071CE"></div><div class="meta"><div class="name">retail</div><div class="hex">#0071CE</div><div class="role">Retail</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#E60000"></div><div class="meta"><div class="name">telecoms</div><div class="hex">#E60000</div><div class="role">Telecoms</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#D4498F"></div><div class="meta"><div class="name">beauty</div><div class="hex">#D4498F</div><div class="role">Beauty</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#7BC8A4"></div><div class="meta"><div class="name">skincare</div><div class="hex">#7BC8A4</div><div class="role">Skincare</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#9B59B6"></div><div class="meta"><div class="name">haircare</div><div class="hex">#9B59B6</div><div class="role">Haircare</div></div></div>
+    </div>
+  </div>
+
+  <!-- TYPOGRAPHY -->
+  <div class="sec">
+    <div class="sec-eyebrow"><span class="dot"></span><span class="lbl">Typography</span></div>
+    <div class="type-row">
+      <div class="type-spec"><b>Playfair Display</b><br/>700 · 38–44px<br/>Display headings</div>
+      <div style="font-family:var(--serif); font-weight:700; font-size:40px; color:var(--text-1);">Castle Lite</div>
+    </div>
+    <div class="type-row">
+      <div class="type-spec"><b>Inter</b><br/>800 · 13px · 0.18em<br/>Section labels</div>
+      <div style="font-family:var(--sans); font-weight:800; font-size:14px; letter-spacing:0.18em; text-transform:uppercase; color:var(--text-1);">Social Snapshot</div>
+    </div>
+    <div class="type-row">
+      <div class="type-spec"><b>Inter</b><br/>500 · 13px<br/>Body &amp; UI</div>
+      <div style="font-family:var(--sans); font-weight:500; font-size:13.5px; color:var(--text-2); line-height:1.6;">Castle Lite reinforced its “extra cold” promise through aspirational lifestyle content.</div>
+    </div>
+    <div class="type-row">
+      <div class="type-spec"><b>Space Mono</b><br/>700 · 9–11px · 0.22em<br/>Eyebrows · badges</div>
+      <div style="font-family:var(--mono); font-weight:700; font-size:11px; letter-spacing:0.22em; text-transform:uppercase; color:var(--text-3);">Competitor Snapshot · 01 / 04</div>
+    </div>
+  </div>
+
+  <!-- COMPONENTS -->
+  <div class="sec">
+    <div class="sec-eyebrow"><span class="dot"></span><span class="lbl">Components</span></div>
+    <div class="demo-grid">
+
+      <div class="demo">
+        <div class="demo-cap">Buttons</div>
+        <div class="row">
+          <button class="btn-primary">Run Snapshot</button>
+          <button class="btn-ghost">Refresh</button>
+          <button class="btn-accent-soft">✦ Auto-load Creative</button>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="demo-cap">Badges &amp; pills</div>
+        <div class="row">
+          <span class="badge">Private Beta · Invite Only</span>
+          <span class="badge badge-live">● Live</span>
+        </div>
+        <div class="row" style="margin-top:12px;">
+          <span class="badge-signal"><span class="d">◉</span><span class="t">Signal</span><span class="k">winter</span></span>
+          <span class="score">◎ 8.5<span class="dm">/10</span></span>
+        </div>
+      </div>
+
+      <div class="demo">
+        <div class="demo-cap">Theme bar</div>
+        <div class="label-demo">Promotions</div>
+        <div class="bar-track"><div class="bar-fill" style="width:80%"></div></div>
+        <div class="label-demo">Product</div>
+        <div class="bar-track"><div class="bar-fill" style="width:65%"></div></div>
+      </div>
+
+      <div class="demo">
+        <div class="demo-cap">Sentiment index</div>
+        <div class="sent-bar">
+          <i class="sent-pos" style="width:75%"></i>
+          <i class="sent-neu" style="width:20%"></i>
+          <i class="sent-neg" style="width:5%"></i>
+        </div>
+        <div style="margin-top:12px; font-size:11px; color:var(--text-2);">75% Positive · 20% Neutral · 5% Negative</div>
+      </div>
+
+      <div class="demo">
+        <div class="demo-cap">Input</div>
+        <div class="label-demo">Signal Keyword</div>
+        <input class="inp" placeholder="e.g. new flavour, summer, FIFA…" />
+      </div>
+
+      <div class="demo">
+        <div class="demo-cap">Key-activity highlight</div>
+        <div style="font-size:13px; line-height:1.7; color:var(--text-2);">Anchored by the <span class="hi">LIV Golf</span> sponsorship and the <span class="hi">Extra Cold Summer</span> push.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- TOKENS -->
+  <div class="sec">
+    <div class="sec-eyebrow"><span class="dot"></span><span class="lbl">Radii · Borders · Shadow</span></div>
+    <div class="tok-grid">
+      <div class="tok"><div class="box" style="border-radius:8px"></div><div class="n">radius 8px · chips</div></div>
+      <div class="tok"><div class="box" style="border-radius:12px"></div><div class="n">radius 12px · pills</div></div>
+      <div class="tok"><div class="box" style="border-radius:16px"></div><div class="n">radius 16–18px · cards</div></div>
+      <div class="tok"><div class="box" style="border:1px solid rgba(255,255,255,0.07); border-radius:8px; background:var(--surface)"></div><div class="n">border 0.07α hairline</div></div>
+      <div class="tok"><div class="box" style="border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,0.3); background:var(--card)"></div><div class="n">card shadow</div></div>
+      <div class="tok"><div class="box" style="border-radius:12px; background:linear-gradient(135deg,#FF5500,#FF7A3D); box-shadow:0 8px 32px -8px rgba(255,85,0,0.4)"></div><div class="n">accent glow</div></div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
