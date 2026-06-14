@@ -286,6 +286,22 @@ async function fetchApifyCreative(igUrl, apifyToken) {
 function saveKey(k) { localStorage.setItem(LS_KEY, k.trim()); }
 function clearKey() { localStorage.removeItem(LS_KEY); }
 
+/* ---- Gemini daily call counter (free tier ≈ 1,500/day) ---- */
+function getGeminiCallsToday() {
+  const stored = JSON.parse(localStorage.getItem('signal_gemini_quota') || '{}');
+  const today = new Date().toDateString();
+  if (stored.date !== today) return 0;
+  return stored.calls || 0;
+}
+
+function incrementGeminiCalls() {
+  const today = new Date().toDateString();
+  const stored = JSON.parse(localStorage.getItem('signal_gemini_quota') || '{}');
+  const calls = stored.date === today ? (stored.calls || 0) + 1 : 1;
+  localStorage.setItem('signal_gemini_quota', JSON.stringify({ date: today, calls }));
+  return calls;
+}
+
 /* Check if the proxy is alive (fast, no throws) */
 async function proxyAlive() {
   try {
@@ -470,6 +486,7 @@ RULES:
 - Base all values on real search results; use informed estimates where search data is incomplete`;
 
   let raw = await callGemini(prompt, apiKey);
+  incrementGeminiCalls();
   let cd  = parseChartData(raw);
   if (!cd) {
     /* One automatic retry — grounding sometimes returns partial output on first call */

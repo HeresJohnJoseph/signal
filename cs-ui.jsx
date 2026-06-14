@@ -798,7 +798,7 @@ function Sidebar(props) {
           signalKeyword, setSignalKeyword,
           onGenerateReport, reportBusy, canReport,
           onGeneratePPT, pptBusy,
-          onShowMethodology } = props;
+          onShowMethodology, geminiCalls = 0 } = props;
   const st = runState === "running" ? { cls: "running", txt: "◍ Running…" }
            : runState === "ready" ? { cls: "ready", txt: "◉ Windows Ready" }
            : { cls: "idle", txt: "◌ Awaiting Run" };
@@ -806,7 +806,7 @@ function Sidebar(props) {
   const brandRow = (key, label, dot) => {
     const sel = brandSel === key;
     return (
-      <div className={"brand-opt" + (sel ? " sel" : "")} onClick={() => setBrandSel(key)} role="radio" aria-checked={sel}>
+      <div key={key} className={"brand-opt" + (sel ? " sel" : "")} onClick={() => setBrandSel(key)} role="radio" aria-checked={sel}>
         <span className="brand-dot" style={{ background: dot }}></span>
         <span className="brand-name">{label}</span>
         <span className="brand-radio"></span>
@@ -897,6 +897,15 @@ function Sidebar(props) {
         <button className="btn-meth" onClick={onShowMethodology}>
           <span className="meth-ic">ℹ</span>Methodology &amp; Lexicon
         </button>
+
+        <div className={"quota-chip" + (geminiCalls >= 1425 ? " quota-red" : geminiCalls >= 1200 ? " quota-amber" : "")}>
+          <span className="quota-ic">◉</span>
+          <span className="quota-body">
+            <span className="quota-k">Gemini</span>
+            <span className="quota-v">{geminiCalls.toLocaleString()} / 1,500 calls today</span>
+          </span>
+          {geminiCalls >= 1200 && <span className="quota-warn">{geminiCalls >= 1425 ? "CRITICAL" : "HIGH"}</span>}
+        </div>
 
         <div className="src-chip">
           <span className="src-ic">⊞</span>

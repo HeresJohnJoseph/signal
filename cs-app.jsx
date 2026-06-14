@@ -34,10 +34,12 @@ function App() {
   const [busy, setBusy] = useState(false);
   const [suggesting, setSuggesting] = useState(false);
   const [cards, setCards] = useState([]);
+  const [geminiCalls, setGeminiCalls] = useState(() => getGeminiCallsToday());
 
   const handleSetApiKey = (k) => { localStorage.setItem("cs_gemini_key", k); setApiKey(k); };
   const handleSetSignal = (k) => { localStorage.setItem("cs_signal_kw", k); setSignalKeyword(k); };
   const handleSetApifyToken = (t) => { saveApifyToken(t); setApifyToken(t); };
+  const refreshQuota = () => setGeminiCalls(getGeminiCallsToday());
 
   const brandLabel = BRANDS[brandSel].name;
   const brandCat = BRANDS[brandSel].cat;
@@ -56,6 +58,7 @@ function App() {
       const fetched = await loadSheetCompetitors(brandSel, colors, month, year);
       setCards(fetched);
       setRunState("ready");
+      if (window.posthog) window.posthog.capture('run_snapshot', { brand: brandSel, competitor_count: fetched.length, month, year });
 
       /* Auto-analyze every competitor sequentially with a small stagger */
       if (fetched.length > 0 && !aiUnavailable) {
@@ -65,6 +68,8 @@ function App() {
           try {
             const res = await analyzeWindow(fetched[i], BRANDS[brandSel].name, month, year, apiKey, signalKeyword);
             setCards(prev => prev.map((c, ci) => ci === i ? { ...c, analyzing: false, analyzed: true, snapshot: res.snapshot, themes: res.themes, insight: res.insight, sentiment: res.sentiment, postFrequency: res.postFrequency, effectivenessScore: res.effectivenessScore, executiveSummary: res.executiveSummary, keyCampaigns: res.keyCampaigns, contentSnapshot: res.contentSnapshot, creativeScores: res.creativeScores, whitespace: res.whitespace, recommendations: res.recommendations, signalMatch: res.signalMatch, signalNote: res.signalNote, signalLink: res.signalLink } : c));
+            refreshQuota();
+            if (window.posthog) window.posthog.capture('card_analyzed', { brand: brandSel, competitor: fetched[i].name });
           } catch (e) {
             console.error("Auto-analyze failed for", fetched[i].name, e);
             if (e.message?.toLowerCase().includes("leaked")) { resetKey(); return; }
@@ -74,11 +79,13 @@ function App() {
               try {
                 const res = await analyzeWindow(fetched[i], BRANDS[brandSel].name, month, year, apiKey, signalKeyword);
                 setCards(prev => prev.map((c, ci) => ci === i ? { ...c, analyzing: false, analyzed: true, snapshot: res.snapshot, themes: res.themes, insight: res.insight, sentiment: res.sentiment, postFrequency: res.postFrequency, effectivenessScore: res.effectivenessScore, executiveSummary: res.executiveSummary, keyCampaigns: res.keyCampaigns, contentSnapshot: res.contentSnapshot, creativeScores: res.creativeScores, whitespace: res.whitespace, recommendations: res.recommendations, signalMatch: res.signalMatch, signalNote: res.signalNote, signalLink: res.signalLink } : c));
+                refreshQuota();
+                if (window.posthog) window.posthog.capture('card_analyzed', { brand: brandSel, competitor: fetched[i].name });
                 continue;
               } catch (e2) {
                 console.error("Retry failed for", fetched[i].name, e2);
                 if (e2.message?.toLowerCase().includes("leaked")) { resetKey(); return; }
-                setCards(prev => prev.map((c, ci) => ci === i ? { ...c, analyzing: false, analyzeError: e2.message } : c));
+                setCards(prev => prev.map((c, ci) => ci === i ? { ...c, analyzing: false, analyzeError: "Gemini hit its rate limit — click Re-analyze to retry. (Free tier resets every minute; daily quota resets overnight.)" } : c));
                 continue;
               }
             }
@@ -101,6 +108,8 @@ function App() {
     try {
       const res = await analyzeWindow(card, brandLabel, month, year, apiKey, signalKeyword);
       patchCard(ci, { analyzing: false, analyzed: true, snapshot: res.snapshot, themes: res.themes, insight: res.insight, sentiment: res.sentiment, postFrequency: res.postFrequency, effectivenessScore: res.effectivenessScore, executiveSummary: res.executiveSummary, keyCampaigns: res.keyCampaigns, contentSnapshot: res.contentSnapshot, creativeScores: res.creativeScores, whitespace: res.whitespace, recommendations: res.recommendations, signalMatch: res.signalMatch, signalNote: res.signalNote, signalLink: res.signalLink });
+      if (window.posthog) window.posthog.capture('card_analyzed', { brand: brandSel, competitor: card.name });
+      refreshQuota();
     } catch (e) {
       console.error("Analyze failed", e);
       if (e.message?.toLowerCase().includes("leaked")) { resetKey(); return; }
@@ -110,11 +119,13 @@ function App() {
         try {
           const res = await analyzeWindow(card, brandLabel, month, year, apiKey, signalKeyword);
           patchCard(ci, { analyzing: false, analyzed: true, snapshot: res.snapshot, themes: res.themes, insight: res.insight, sentiment: res.sentiment, postFrequency: res.postFrequency, effectivenessScore: res.effectivenessScore, executiveSummary: res.executiveSummary, keyCampaigns: res.keyCampaigns, contentSnapshot: res.contentSnapshot, creativeScores: res.creativeScores, whitespace: res.whitespace, recommendations: res.recommendations, signalMatch: res.signalMatch, signalNote: res.signalNote, signalLink: res.signalLink });
+          if (window.posthog) window.posthog.capture('card_analyzed', { brand: brandSel, competitor: card.name });
+          refreshQuota();
           return;
         } catch (e2) {
           console.error("Retry failed", e2);
           if (e2.message?.toLowerCase().includes("leaked")) { resetKey(); return; }
-          patchCard(ci, { analyzing: false, analyzeError: e2.message });
+          patchCard(ci, { analyzing: false, analyzeError: "Gemini hit its rate limit — click Re-analyze to retry. (Free tier resets every minute; daily quota resets overnight.)" });
           return;
         }
       }
@@ -144,6 +155,7 @@ function App() {
       const urls = await fetchApifyCreative(card.ig, token);
       urls.forEach((url, idx) => onSetPost(ci, idx, url));
       patchCard(ci, { loadingCreative: false });
+      if (window.posthog) window.posthog.capture('load_creative', { brand: brandSel, competitor: card.name });
     } catch (e) {
       console.error("Apify creative load failed", e);
       if ((e.message || "").includes("token rejected")) handleSetApifyToken("");
@@ -173,7 +185,7 @@ function App() {
   const stateForExport = () => ({ brandLabel, brandColor: ctxColor, month, year, cards, signalKeyword });
   const onGenerate = async () => {
     setBusy(true);
-    try { await generatePDF(stateForExport()); } catch (e) { console.error(e); }
+    try { await generatePDF(stateForExport()); if (window.posthog) window.posthog.capture('export_pdf', { brand: brandSel }); } catch (e) { console.error(e); }
     setBusy(false);
   };
   const [reportBusy, setReportBusy] = useState(false);
@@ -187,7 +199,7 @@ function App() {
   };
   const onGeneratePPT = async () => {
     setPptBusy(true);
-    try { await generatePPT(stateForExport()); } catch (e) { console.error(e); }
+    try { await generatePPT(stateForExport()); if (window.posthog) window.posthog.capture('export_ppt', { brand: brandSel }); } catch (e) { console.error(e); }
     setPptBusy(false);
   };
 
@@ -208,7 +220,8 @@ function App() {
         onGenerateReport={onGenerateReport} reportBusy={reportBusy} canReport={canReport}
         onGeneratePPT={onGeneratePPT} pptBusy={pptBusy}
         onShowMethodology={() => setShowMethodology(true)}
-        onShowAudit={() => setShowAudit(true)} />
+        onShowAudit={() => setShowAudit(true)}
+        geminiCalls={geminiCalls} />
 
       <MethodologyPanel show={showMethodology} onClose={() => setShowMethodology(false)} />
       <SocialAuditPanel show={showAudit} onClose={() => setShowAudit(false)} cards={cards} apiKey={apiKey} year={year} />

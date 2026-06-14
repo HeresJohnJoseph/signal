@@ -1013,3 +1013,16 @@ image-slot[data-kind="avatar"]::part(ring) { border: 1.5px solid rgba(255,255,25
 .btn-load-creative:hover:not(:disabled) { background: rgba(255,255,255,0.1); color: #fff; }
 .btn-load-creative.busy { opacity: 0.6; cursor: wait; }
 .creative-err { font-size: 10px; color: #e05; margin-top: 4px; padding: 0 2px; flex-shrink: 0; }
+
+/* Gemini quota chip */
+.quota-chip { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; margin: 8px 0 4px; }
+.quota-chip.quota-amber { border-color: rgba(255,180,0,0.4); background: rgba(255,180,0,0.06); }
+.quota-chip.quota-red { border-color: rgba(255,50,50,0.4); background: rgba(255,50,50,0.06); }
+.quota-ic { font-size: 10px; color: #3a3; }
+.quota-chip.quota-amber .quota-ic { color: #fb0; }
+.quota-chip.quota-red .quota-ic { color: #f33; }
+.quota-body { display: flex; flex-direction: column; flex: 1; }
+.quota-k { font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: #555; }
+.quota-v { font-size: 11px; color: #ccc; }
+.quota-warn { font-size: 9px; font-weight: 700; letter-spacing: 0.08em; color: #fb0; }
+.quota-chip.quota-red .quota-warn { color: #f55; }

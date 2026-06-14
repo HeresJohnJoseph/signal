@@ -23,6 +23,25 @@
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<!-- Analytics -->
+<script>
+  !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+" (stub)"},o="capture identify alias people.set people.set_once set_config register register_once unregister opt_out_capturing has_opted_out_capturing opt_in_capturing reset isFeatureEnabled onFeatureFlags getFeatureFlag getFeatureFlagPayload reloadFeatureFlags group updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures getActiveMatchingSurveys getSurveys onSessionId".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+  posthog.init('phc_REPLACE_WITH_YOUR_POSTHOG_KEY', {
+    api_host: 'https://us.i.posthog.com',
+    person_profiles: 'identified_only',
+    capture_pageview: true,
+  });
+
+  const refParam = new URLSearchParams(window.location.search).get('ref');
+  if (refParam) {
+    posthog.register({ referral_source: refParam });
+    localStorage.setItem('signal_ref', refParam);
+  } else {
+    const storedRef = localStorage.getItem('signal_ref');
+    if (storedRef) posthog.register({ referral_source: storedRef });
+  }
+</script>
 </head>
 <body>
 <script>
@@ -37,8 +56,8 @@
 </script>
 <div id="root"></div>
 
-<script type="text/babel" src="cs-data.jsx?v=20260612h"></script>
-<script type="text/babel" src="cs-ui.jsx?v=20260612h"></script>
-<script type="text/babel" src="cs-app.jsx?v=20260612h"></script>
+<script type="text/babel" src="cs-data.jsx?v=20260613a"></script>
+<script type="text/babel" src="cs-ui.jsx?v=20260613a"></script>
+<script type="text/babel" src="cs-app.jsx?v=20260613a"></script>
 </body>
 </html>
