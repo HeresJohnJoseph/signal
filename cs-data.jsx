@@ -159,6 +159,23 @@ const _sheetCache = {};
    so a client demo can never fail on live rate limits or quota.
    ============================================================ */
 const _demoImg = (seed) => `https://picsum.photos/seed/${seed}/400/500`;
+/* Category-appropriate stock imagery for the creative grid (served via the weserv proxy).
+   High-population keywords so they reliably return relevant photos. */
+const DEMO_KEYWORDS = {
+  alcohol:  ["beer", "cocktail", "bar", "party", "drinks", "cheers"],
+  qsr:      ["burger", "fries", "chicken", "pizza", "restaurant", "soda"],
+  retail:   ["shopping", "fashion", "store", "product", "delivery", "clothing"],
+  telecoms: ["smartphone", "technology", "network", "phone", "city", "connection"],
+  beauty:   ["makeup", "cosmetics", "lipstick", "model", "glamour", "mascara"],
+  skincare: ["skincare", "serum", "spa", "moisturizer", "face", "cosmetics"],
+  haircare: ["hairstyle", "salon", "hair", "model", "shampoo", "beauty"],
+};
+function _demoPosts(o) {
+  const cat = BRANDS[o.parent] ? BRANDS[o.parent].category : o.parent;
+  const kws = DEMO_KEYWORDS[cat] || ["product", "lifestyle", "brand", "social", "marketing", "design"];
+  const base = Math.abs([...o.name].reduce((a, c) => a + c.charCodeAt(0), 0)) % 900;
+  return kws.map((kw, i) => `https://loremflickr.com/400/500/${kw}?lock=${base + i + 1}`);
+}
 function demoCard(o) {
   const socials = socialPlatsFor(o.parent);
   return {
@@ -177,7 +194,7 @@ function demoCard(o) {
     whitespace: o.whitespace || "",
     recommendations: o.rec || "",
     signalMatch: !!o.signalMatch, signalNote: o.signalNote || "", signalLink: o.signalLink || "",
-    posts: o.posts || [1,2,3,4,5,6].map(n => _demoImg(o.name.replace(/\W/g, "") + n)),
+    posts: o.posts || _demoPosts(o),
     analyzing: false, analyzed: true,
   };
 }

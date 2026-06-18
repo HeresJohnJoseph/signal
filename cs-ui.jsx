@@ -58,7 +58,19 @@ function PostSlot({ imageUrl, onSet, slotIdx }) {
       title={imageUrl ? "Click to clear" : "Click · Paste (⌘V) · Drop image"}
     >
       {imageUrl && !broken
-        ? <img src={proxiedSrc(imageUrl)} alt="post" onError={() => setBroken(true)}
+        ? <img src={proxiedSrc(imageUrl)} alt="post"
+               onError={(e) => {
+                 /* Demo stock (loremflickr) is occasionally flaky — fall back to a
+                    guaranteed-loading photo so the grid is never visibly broken.
+                    Real pasted URLs keep the explicit "couldn't load" state. */
+                 const orig = imageUrl || "";
+                 if (orig.includes("loremflickr") && !e.target.dataset.fellBack) {
+                   e.target.dataset.fellBack = "1";
+                   e.target.src = proxiedSrc("https://picsum.photos/seed/sig" + slotIdx + (orig.length % 97) + "/400/500");
+                 } else {
+                   setBroken(true);
+                 }
+               }}
                style={{ width:"100%", height:"100%", objectFit:"cover", borderRadius:"14px", display:"block" }} />
         : imageUrl && broken
         ? <div className="post-slot-empty">
