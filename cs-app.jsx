@@ -3,6 +3,9 @@
    ============================================================ */
 const { useState, useRef } = React;
 
+/* Demo mode (?demo=1): skips sign-in + API key, loads pre-analyzed data */
+const DEMO_MODE = new URLSearchParams(window.location.search).get('demo') === '1';
+
 function App() {
   const colors = {
     amarula:  "#C8860A", bernini:  "#4A7FB5", hunters:  "#2E6B2F",
@@ -21,7 +24,7 @@ function App() {
     return m.includes("rate") || m.includes("quota") || m.includes("429");
   };
 
-  if (!apiKey) {
+  if (!apiKey && !DEMO_MODE) {
     return <SetupScreen onSave={(k) => setApiKey(k)} />;
   }
   const [signalKeyword, setSignalKeyword] = useState(() => localStorage.getItem("cs_signal_kw") || "");
@@ -54,6 +57,21 @@ function App() {
   const onRun = async () => {
     setRunState("running");
     setFetchErr(null);
+
+    /* Demo mode — load pre-analyzed cards instantly, no API */
+    if (DEMO_MODE) {
+      const demo = loadDemoCompetitors(brandSel);
+      if (demo && demo.length) {
+        setCards(demo);
+        setRunState("ready");
+        if (window.posthog) window.posthog.capture('run_snapshot', { brand: brandSel, competitor_count: demo.length, month, year, demo: true });
+      } else {
+        setFetchErr(`No demo data for ${brandLabel} yet — try QSR or an Alcohol brand.`);
+        setRunState("idle");
+      }
+      return;
+    }
+
     try {
       const fetched = await loadSheetCompetitors(brandSel, colors, month, year);
       setCards(fetched);
@@ -289,6 +307,11 @@ function App() {
 /* Validate any stored key before rendering — a dead/leaked key is cleared
    automatically so the user lands on the setup screen instead of a broken app. */
 (async () => {
+  /* Demo mode skips key validation entirely — render straight away */
+  if (DEMO_MODE) {
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+    return;
+  }
   let k = getStoredKey();
   if (!k) {
     /* no local key — try the shared team key from the sheet's Config tab */

@@ -153,6 +153,172 @@ async function fetchSheetTab(brandSel, filterMonth, filterYear) {
 /* in-memory cache so switching back doesn't re-fetch */
 const _sheetCache = {};
 
+/* ============================================================
+   DEMO MODE — pre-analyzed competitor sets for client demos.
+   Activated via ?demo=1 ; loads instantly, no API key / sign-in,
+   so a client demo can never fail on live rate limits or quota.
+   ============================================================ */
+const _demoImg = (seed) => `https://picsum.photos/seed/${seed}/400/500`;
+function demoCard(o) {
+  const socials = socialPlatsFor(o.parent);
+  return {
+    name: o.name, handle: o.handle, color: o.color, parent: o.parent, source: "synced", note: "",
+    ig: o.ig || "#", fb: o.fb || "#", x: o.x || "#", tiktok: o.tiktok || "", web: o.web || "#",
+    snapshot: o.snapshot,
+    themes: THEME_LABELS.map(l => ({ label: l, value: o.themes[l] || 0 })),
+    insight: o.insight,
+    sentiment: o.sentiment,
+    postFrequency: Object.fromEntries(socials.map(p => [p, o.freq[p] || 0])),
+    effectivenessScore: o.score,
+    executiveSummary: o.exec || "",
+    keyCampaigns: o.campaigns || [],
+    contentSnapshot: o.content || null,
+    creativeScores: o.creative,
+    whitespace: o.whitespace || "",
+    recommendations: o.rec || "",
+    signalMatch: !!o.signalMatch, signalNote: o.signalNote || "", signalLink: o.signalLink || "",
+    posts: o.posts || [1,2,3,4,5,6].map(n => _demoImg(o.name.replace(/\W/g, "") + n)),
+    analyzing: false, analyzed: true,
+  };
+}
+
+const DEMO_DATA = {
+  qsr: [
+    demoCard({ name: "KFC SA", handle: "@kfcsa", color: "#E4002B", parent: "qsr",
+      ig: "https://instagram.com/kfcsa", fb: "https://facebook.com/KFCSouthAfrica", x: "https://x.com/KFCSA", tiktok: "@kfcsa", web: "https://kfc.co.za",
+      snapshot: [
+        { platform: "Facebook",  role: "Primary",  comment: "Always-on value promos" },
+        { platform: "Instagram", role: "Primary",  comment: "Bucket culture, music" },
+        { platform: "X",         role: "Light",    comment: "Customer care" },
+        { platform: "TikTok",    role: "Primary",  comment: "Creator-led trends" },
+        { platform: "Website",   role: "Primary",  comment: "Online ordering" } ],
+      themes: { Promotions: 78, Product: 60, Serves: 30, Seasonal: 22, Lifestyle: 42 },
+      insight: "KFC SA dominated June through always-on value messaging, anchored by the **Streetwise** range and a **#KFCxGqom** creator series that drove the bulk of its TikTok engagement.",
+      sentiment: { positive: 68, neutral: 24, negative: 8 }, freq: { Facebook: 22, Instagram: 26, X: 14, TikTok: 30 }, score: 8.4,
+      creative: { platformNative: 9, culturalRelevance: 9, visualDistinctiveness: 7, strategicClarity: 8, engagementPotential: 9 },
+      exec: "KFC leaned hard into value and culture, pairing the Streetwise range with locally-relevant creator content to defend share among younger, price-sensitive audiences.",
+      campaigns: [{ title: "Streetwise Value", description: "Always-on affordability push across all platforms." }, { title: "#KFCxGqom", description: "Creator series tying the brand to local gqom music culture." }],
+      whitespace: "Limited premium / quality storytelling — all value, little craft.", rec: "Hunters can own a 'crafted' positioning where KFC stays purely transactional.",
+      signalMatch: true, signalNote: "Found a **Streetwise** value-range push dated 9 June running across Instagram and TikTok.", signalLink: "https://instagram.com/kfcsa" }),
+    demoCard({ name: "McDonald's SA", handle: "@mcdonaldssa", color: "#FFC72C", parent: "qsr",
+      ig: "https://instagram.com/mcdonaldssa", fb: "https://facebook.com/McDonaldsSA", x: "https://x.com/McDonaldsSA", tiktok: "@mcdonaldssa", web: "https://mcdonalds.co.za",
+      snapshot: [
+        { platform: "Facebook",  role: "Primary",  comment: "Family & value" },
+        { platform: "Instagram", role: "Primary",  comment: "Product hero shots" },
+        { platform: "X",         role: "Light",    comment: "Reactive banter" },
+        { platform: "TikTok",    role: "Light",    comment: "Trend participation" },
+        { platform: "Website",   role: "Primary",  comment: "App & delivery" } ],
+      themes: { Promotions: 65, Product: 80, Serves: 25, Seasonal: 35, Lifestyle: 20 },
+      insight: "McDonald's SA centred June on product hero creative and the **McDelivery** app push, with a polished but less culturally-native feed than KFC.",
+      sentiment: { positive: 62, neutral: 28, negative: 10 }, freq: { Facebook: 18, Instagram: 20, X: 9, TikTok: 12 }, score: 7.6,
+      creative: { platformNative: 7, culturalRelevance: 6, visualDistinctiveness: 8, strategicClarity: 8, engagementPotential: 7 },
+      exec: "Product-led and app-first, McDonald's prioritised polish and delivery conversion over cultural relevance this period.",
+      campaigns: [{ title: "McDelivery", description: "App-led delivery convenience messaging." }],
+      whitespace: "Under-indexed on local culture and creators vs KFC.", rec: "Cultural relevance is contestable territory against McDonald's.",
+      signalMatch: false, signalNote: "No matching content found." }),
+    demoCard({ name: "Burger King SA", handle: "@burgerkingsa", color: "#D62300", parent: "qsr",
+      ig: "https://instagram.com/burgerkingsa", fb: "https://facebook.com/BurgerKingSA", x: "https://x.com/BurgerKingZA", tiktok: "@burgerkingsa", web: "https://burgerking.co.za",
+      snapshot: [
+        { platform: "Facebook",  role: "Primary",  comment: "Price-led offers" },
+        { platform: "Instagram", role: "Primary",  comment: "Flame-grill craft" },
+        { platform: "X",         role: "Light",    comment: "Challenger jabs" },
+        { platform: "TikTok",    role: "Light",    comment: "Occasional trends" },
+        { platform: "Website",   role: "Light",    comment: "Menu & stores" } ],
+      themes: { Promotions: 85, Product: 70, Serves: 40, Seasonal: 18, Lifestyle: 12 },
+      insight: "Burger King SA ran an aggressive price-led June built around the **Whopper Wednesday** mechanic and challenger-brand jabs at rivals.",
+      sentiment: { positive: 58, neutral: 30, negative: 12 }, freq: { Facebook: 16, Instagram: 14, X: 11, TikTok: 8 }, score: 7.1,
+      creative: { platformNative: 7, culturalRelevance: 6, visualDistinctiveness: 7, strategicClarity: 7, engagementPotential: 7 },
+      exec: "A discount-heavy challenger play — strong on offers and flame-grill craft cues, lighter on cultural and lifestyle content.",
+      campaigns: [{ title: "Whopper Wednesday", description: "Weekly price mechanic anchoring the month." }],
+      whitespace: "Heavy discounting risks brand equity erosion.", rec: "Avoid a discount war; compete on distinctiveness." }),
+    demoCard({ name: "Nando's SA", handle: "@nandossa", color: "#DC0032", parent: "qsr",
+      ig: "https://instagram.com/nandossa", fb: "https://facebook.com/NandosSA", x: "https://x.com/NandosSA", tiktok: "@nandos.sa", web: "https://nandos.co.za",
+      snapshot: [
+        { platform: "Facebook",  role: "Primary",  comment: "Witty topical" },
+        { platform: "Instagram", role: "Primary",  comment: "Bold art direction" },
+        { platform: "X",         role: "Primary",  comment: "Topical commentary" },
+        { platform: "TikTok",    role: "Light",    comment: "Brand humour" },
+        { platform: "Website",   role: "Light",    comment: "Menu & PERi-PERi" } ],
+      themes: { Promotions: 40, Product: 55, Serves: 30, Seasonal: 20, Lifestyle: 70 },
+      insight: "Nando's SA stayed true to its wit-led playbook, using **topical current-affairs** creative and bold art direction to drive earned reach rather than discounting.",
+      sentiment: { positive: 80, neutral: 15, negative: 5 }, freq: { Facebook: 14, Instagram: 16, X: 18, TikTok: 7 }, score: 8.7,
+      creative: { platformNative: 8, culturalRelevance: 10, visualDistinctiveness: 9, strategicClarity: 9, engagementPotential: 9 },
+      exec: "Nando's continued to win on distinctiveness and cultural commentary, generating outsized earned reach without leaning on price.",
+      campaigns: [{ title: "Topical wit", description: "Reactive current-affairs creative driving earned media." }],
+      whitespace: "Lower posting frequency than QSR peers.", rec: "Distinctiveness beats discounting — the Nando's model is the benchmark.",
+      signalMatch: true, signalNote: "Found a **topical** load-shedding ad dated 14 June that drove strong earned reach.", signalLink: "https://x.com/NandosSA" }),
+  ],
+  alcohol: [
+    demoCard({ name: "Castle Lite", handle: "@castlelitesa", color: "#4A7FB5", parent: "hunters",
+      ig: "https://instagram.com/castlelitesa", fb: "https://facebook.com/CastleLite", x: "https://x.com/CastleLite", web: "https://castlelite.co.za",
+      snapshot: [
+        { platform: "Facebook",  role: "Primary",  comment: "Extra-cold lifestyle" },
+        { platform: "Instagram", role: "Primary",  comment: "Music & events" },
+        { platform: "X",         role: "Light",    comment: "Live event banter" },
+        { platform: "Website",   role: "Primary",  comment: "Brand & events" } ],
+      themes: { Promotions: 35, Product: 55, Serves: 40, Seasonal: 30, Lifestyle: 80 },
+      insight: "Castle Lite reinforced its 'extra cold' equity through aspirational lifestyle content, anchored by the **Castle Lite Unlocked** music platform and a **#ExtraCold** summer push.",
+      sentiment: { positive: 74, neutral: 20, negative: 6 }, freq: { Facebook: 16, Instagram: 22, X: 12 }, score: 8.5,
+      creative: { platformNative: 9, culturalRelevance: 9, visualDistinctiveness: 8, strategicClarity: 9, engagementPotential: 8 },
+      exec: "Premium lifestyle and music-led, Castle Lite defended its leadership through experiential equity rather than promotion.",
+      campaigns: [{ title: "Castle Lite Unlocked", description: "Flagship music platform driving cultural relevance." }],
+      whitespace: "Light on at-home / serve occasions.", rec: "Hunters can own the relaxed, everyday occasion Castle Lite skips.",
+      signalMatch: true, signalNote: "Found a **Castle Lite Unlocked** line-up reveal dated 11 June across Instagram and Facebook.", signalLink: "https://instagram.com/castlelitesa" }),
+    demoCard({ name: "Flying Fish", handle: "@flyingfishsa", color: "#16A085", parent: "hunters",
+      ig: "https://instagram.com/flyingfishsa", fb: "https://facebook.com/FlyingFishSA", x: "https://x.com/FlyingFishSA", web: "https://flyingfish.co.za",
+      snapshot: [
+        { platform: "Facebook",  role: "Primary",  comment: "Flavour & fun" },
+        { platform: "Instagram", role: "Primary",  comment: "Bold, youthful" },
+        { platform: "X",         role: "Inactive", comment: "" },
+        { platform: "Website",   role: "Light",    comment: "Product range" } ],
+      themes: { Promotions: 55, Product: 75, Serves: 35, Seasonal: 25, Lifestyle: 50 },
+      insight: "Flying Fish leaned into flavour-led fun, using the **FIFA World Cup** sponsorship hook and bright creator content to court a younger LDA+ audience.",
+      sentiment: { positive: 70, neutral: 22, negative: 8 }, freq: { Facebook: 18, Instagram: 20, X: 0 }, score: 7.8,
+      creative: { platformNative: 8, culturalRelevance: 8, visualDistinctiveness: 8, strategicClarity: 7, engagementPotential: 8 },
+      exec: "Flavoured-beer fun with a sport hook — youthful and high-energy, though strategy is spread across several messages.",
+      campaigns: [{ title: "FIFA World Cup", description: "Football sponsorship hook for the period." }],
+      whitespace: "Message focus is diffuse across flavour, sport and music.", rec: "A sharper single-minded hook would lift Flying Fish's effectiveness.",
+      signalMatch: true, signalNote: "Found a **FIFA World Cup** flavour-upgrade activation dated 7 June on Instagram.", signalLink: "https://instagram.com/flyingfishsa" }),
+    demoCard({ name: "Brutal Fruit", handle: "@brutalfruitza", color: "#E84393", parent: "hunters",
+      ig: "https://instagram.com/brutalfruitza", fb: "https://facebook.com/BrutalFruit", x: "https://x.com/BrutalFruit", web: "https://brutalfruit.co.za",
+      snapshot: [
+        { platform: "Facebook",  role: "Light",    comment: "Elegant lifestyle" },
+        { platform: "Instagram", role: "Primary",  comment: "Aspirational, feminine" },
+        { platform: "X",         role: "Inactive", comment: "" },
+        { platform: "Website",   role: "Light",    comment: "Brand world" } ],
+      themes: { Promotions: 30, Product: 50, Serves: 45, Seasonal: 25, Lifestyle: 78 },
+      insight: "Brutal Fruit held a premium, feminine lifestyle lane built around the **Ruby Apple** hero and elegant, occasion-led Instagram creative.",
+      sentiment: { positive: 76, neutral: 19, negative: 5 }, freq: { Facebook: 10, Instagram: 18, X: 0 }, score: 7.9,
+      creative: { platformNative: 8, culturalRelevance: 8, visualDistinctiveness: 9, strategicClarity: 8, engagementPotential: 7 },
+      exec: "A focused, premium feminine positioning — strong visual distinctiveness and occasion framing, narrow by design.",
+      campaigns: [{ title: "Ruby Apple", description: "Hero SKU anchoring elegant lifestyle creative." }],
+      whitespace: "Narrow audience focus; little male or mixed-occasion content.", rec: "Brutal Fruit cedes the broad social occasion Hunters can own." }),
+    demoCard({ name: "Savanna", handle: "@savannacider", color: "#F39C12", parent: "hunters",
+      ig: "https://instagram.com/savannacider", fb: "https://facebook.com/Savanna", x: "https://x.com/Savanna_Cider", web: "https://savanna.co.za",
+      snapshot: [
+        { platform: "Facebook",  role: "Primary",  comment: "Comedy & wit" },
+        { platform: "Instagram", role: "Primary",  comment: "Humour-led" },
+        { platform: "X",         role: "Light",    comment: "Dry one-liners" },
+        { platform: "Website",   role: "Light",    comment: "Comedy hub" } ],
+      themes: { Promotions: 35, Product: 45, Serves: 30, Seasonal: 20, Lifestyle: 72 },
+      insight: "Savanna stayed in its comedy lane, using the **Savanna Comedy** platform and dry one-liners to drive distinctive, highly-shareable content.",
+      sentiment: { positive: 78, neutral: 17, negative: 5 }, freq: { Facebook: 15, Instagram: 16, X: 10 }, score: 8.2,
+      creative: { platformNative: 8, culturalRelevance: 9, visualDistinctiveness: 9, strategicClarity: 8, engagementPotential: 9 },
+      exec: "Comedy-led distinctiveness — Savanna's wit platform continues to deliver outsized share of voice for spend.",
+      campaigns: [{ title: "Savanna Comedy", description: "Owned comedy platform driving earned reach." }],
+      whitespace: "Humour can crowd out product/occasion cues.", rec: "Hunters can balance wit with clearer occasion framing.",
+      signalMatch: true, signalNote: "Found a **Savanna Comedy** special teaser dated 18 June across Facebook and Instagram.", signalLink: "https://facebook.com/Savanna" }),
+  ],
+};
+
+/* Returns a deep copy of demo cards for the selected brand's category, or null */
+function loadDemoCompetitors(brandSel) {
+  const cat = BRANDS[brandSel]?.category;
+  const set = DEMO_DATA[cat];
+  if (!set) return null;
+  return set.map(c => ({ ...c, posts: [...c.posts], snapshot: c.snapshot.map(s => ({ ...s })), themes: c.themes.map(t => ({ ...t })) }));
+}
+
 async function loadSheetCompetitors(brandSel, colors, month, year) {
   const cacheKey = `${brandSel}-${month}-${year}`;
   if (_sheetCache[cacheKey]) return _sheetCache[cacheKey];
