@@ -1026,3 +1026,28 @@ image-slot[data-kind="avatar"]::part(ring) { border: 1.5px solid rgba(255,255,25
 .quota-v { font-size: 11px; color: #ccc; }
 .quota-warn { font-size: 9px; font-weight: 700; letter-spacing: 0.08em; color: #fb0; }
 .quota-chip.quota-red .quota-warn { color: #f55; }
+
+/* ============================================================
+   RESPONSIVE — stack sidebar above stage on tablet / mobile
+   so the dashboard is never pushed off-screen.
+   ============================================================ */
+@media (max-width: 860px) {
+  html, body, #root { height: auto; min-height: 100%; }
+  .app { flex-direction: column; height: auto; min-height: 100vh; overflow: visible; }
+  .sidebar { width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+  .sb-scroll { overflow-y: visible; padding: 22px 18px 14px; }
+  .sb-footer { padding: 12px 18px; }
+  .stage { height: auto; overflow-y: visible; padding: 24px 18px 56px; }
+  /* brand picker as a compact 2-up grid to cut vertical length */
+  .brand-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px 10px; }
+  .brand-group { margin-bottom: 6px; display: contents; }
+  .brand-group-label { grid-column: 1 / -1; padding: 8px 4px 2px; }
+  .cat-body { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .stage-head { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .sh-title { font-size: 22px; }
+  .stage-msg h2 { font-size: 22px; }
+  .stage-msg p { font-size: 13px; }
+  .cat-slide { padding: 20px 16px 22px; }
+}
