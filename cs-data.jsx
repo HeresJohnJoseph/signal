@@ -801,13 +801,27 @@ function incrementGeminiCalls() {
   return calls;
 }
 
-/* Check if the proxy is alive (fast, no throws) */
+/* Check if the local dev proxy is alive (fast, no throws) */
 async function proxyAlive() {
   try {
     const r = await fetch(`${PROXY}/health`, { signal: AbortSignal.timeout(1200) });
     return r.ok;
   } catch { return false; }
 }
+
+/* Hosted serverless proxy (Vercel /api) — holds the Gemini key server-side
+   so beta testers never need one. Probed once and cached. */
+let _serverProxy = null;
+async function serverProxyAvailable() {
+  if (_serverProxy !== null) return _serverProxy;
+  try {
+    const r = await fetch("/api/health", { signal: AbortSignal.timeout(2500) });
+    const d = await r.json().catch(() => ({}));
+    _serverProxy = !!(r.ok && d.keyConfigured);
+  } catch { _serverProxy = false; }
+  return _serverProxy;
+}
+function getUserEmail() { try { return localStorage.getItem("signal_user_email") || ""; } catch { return ""; } }
 
 /* Direct browser call to Gemini with auto-retry on 429/503 */
 async function callGeminiBrowser(prompt, apiKey, attempt = 0) {
@@ -867,8 +881,24 @@ async function callGeminiBrowser(prompt, apiKey, attempt = 0) {
   return text;
 }
 
-/* Primary entry point — proxy when available, direct fallback otherwise */
+/* Primary entry point. Order of preference:
+   1) Hosted serverless proxy (Vercel /api) — key held server-side, no client key
+   2) Local dev proxy (proxy-server.js on :4323)
+   3) Direct browser call with a user-supplied key */
 async function callGemini(prompt, apiKey) {
+  /* 1) Hosted proxy — beta path. No client key required. */
+  if (await serverProxyAvailable()) {
+    const res = await fetch("/api/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt, email: getUserEmail() }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.text) return data.text;
+    throw new Error(data.error || `Proxy error ${res.status}`);
+  }
+
+  /* 2) + 3) require a key (local dev / static hosting) */
   const key = apiKey || getStoredKey();
   if (!key) throw new Error("no_key: No API key configured.");
   if (await proxyAlive()) {
@@ -885,8 +915,7 @@ async function callGemini(prompt, apiKey) {
     if (data.error) throw new Error(data.error);
     return data.text;
   }
-  /* Proxy not running — call Gemini directly from the browser */
-  console.info("[Gemini] Proxy offline — using direct browser call (no full grounding)");
+  console.info("[Gemini] Proxy offline — using direct browser call");
   return callGeminiBrowser(prompt, key);
 }
 

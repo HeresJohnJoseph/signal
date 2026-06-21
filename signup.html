@@ -218,12 +218,37 @@
     <div class="err" id="err-box">Something went wrong — please try again.</div>
   </form>
 
+  <div id="waitlist" style="display:none; text-align:center; padding:8px 0 4px;">
+    <div style="font-size:34px; color:var(--accent); margin-bottom:12px;">◈</div>
+    <h2 style="font-family:var(--serif); font-size:22px; margin:0 0 10px;">You're on the list</h2>
+    <p style="font-size:13px; line-height:1.7; color:var(--text-2); margin:0;">
+      Thanks for requesting access to Signal. We're onboarding the beta in small batches —
+      we'll email you the moment your spot opens up.
+    </p>
+  </div>
+
   <div class="foot">Your details are only used to set up your Signal access.<br/>No spam, ever.</div>
 </div>
 
 <script>
   var GOOGLE_CLIENT_ID = '668202609701-02uo3t9tf33015m6kphugtm7rnolvrne.apps.googleusercontent.com';
   var APPS_SCRIPT_URL  = 'https://script.google.com/macros/s/AKfycbxFSOZ7VSoTWRLdSzfxe9rrImyEGell3VS42JX839bxLyEUF-NEKTrXkQJeZ6rSVXQWrw/exec';
+  var SHEET_ID = '1zIEipR_aJMiDk9XoT7LmEnXu4yg6cNgF';
+
+  /* Beta allowlist: only emails listed in the sheet's "Allowlist" tab get in.
+     Returns 'allow' | 'deny' | 'open' (no list configured yet → admit). */
+  async function checkAllowlist(email) {
+    try {
+      var r = await fetch('https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/gviz/tq?tqx=out:csv&sheet=Allowlist');
+      if (!r.ok) return 'open';
+      var txt = await r.text();
+      var emails = txt.split(/\r?\n/)
+        .map(function (l) { return (l.split(',')[0] || '').replace(/^"|"$/g, '').trim().toLowerCase(); })
+        .filter(function (e) { return e.indexOf('@') >= 0; });
+      if (!emails.length) return 'open';
+      return emails.indexOf((email || '').toLowerCase().trim()) >= 0 ? 'allow' : 'deny';
+    } catch (e) { return 'open'; }
+  }
 
   /* Already registered? Straight into the app. */
   if (localStorage.getItem('signal_registered')) {
@@ -242,6 +267,7 @@
     try {
       var payload = JSON.parse(atob(response.credential.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
       googleUser = { name: payload.name || '', email: payload.email || '', picture: payload.picture || '' };
+      if (googleUser.email) localStorage.setItem('signal_user_email', googleUser.email);
       document.getElementById('p-pic').src = googleUser.picture;
       document.getElementById('p-name').textContent = googleUser.name;
       document.getElementById('p-email').textContent = googleUser.email;
@@ -309,6 +335,13 @@
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error('HTTP ' + res.status);
+      /* Request captured. Now gate on the beta allowlist. */
+      var status = await checkAllowlist(payload.email);
+      if (status === 'deny') {
+        document.getElementById('step2').style.display = 'none';
+        document.getElementById('waitlist').style.display = 'block';
+        return;
+      }
       localStorage.setItem('signal_registered', 'true');
       window.location.href = 'competitor-snapshot.html';
     } catch (err) {

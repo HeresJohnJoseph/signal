@@ -24,7 +24,9 @@ function App() {
     return m.includes("rate") || m.includes("quota") || m.includes("429");
   };
 
-  if (!apiKey && !DEMO_MODE) {
+  /* Hosted serverless proxy holds the key — no per-user key needed */
+  const serverProxy = typeof window !== "undefined" && window.__signalServerProxy === true;
+  if (!apiKey && !DEMO_MODE && !serverProxy) {
     return <SetupScreen onSave={(k) => setApiKey(k)} />;
   }
   const [signalKeyword, setSignalKeyword] = useState(() => localStorage.getItem("cs_signal_kw") || "");
@@ -309,6 +311,12 @@ function App() {
 (async () => {
   /* Demo mode skips key validation entirely — render straight away */
   if (DEMO_MODE) {
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+    return;
+  }
+  /* Hosted serverless proxy (Vercel) — key lives server-side, no client key needed */
+  if (await serverProxyAvailable()) {
+    window.__signalServerProxy = true;
     ReactDOM.createRoot(document.getElementById("root")).render(<App />);
     return;
   }
