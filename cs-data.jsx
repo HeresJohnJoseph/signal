@@ -1287,6 +1287,38 @@ async function callGemini(prompt, apiKey) {
   return callGeminiBrowser(prompt, key);
 }
 
+/* callProxy — sends a structured payload to the proxy, which builds the prompt
+   server-side from it. The methodology lives only on the server, so it never
+   ships to the browser bundle (IP protection). `payload` carries the request
+   shape: { params } for analysis, { audit } for a period audit. Requires the
+   Signal server proxy; on static hosting without it, this is unavailable. */
+async function callProxy(payload) {
+  /* 1) Hosted proxy — beta path. */
+  if (await serverProxyAvailable()) {
+    const res = await fetch("/api/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...payload, email: getUserEmail() }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.text) return data.text;
+    throw new Error(data.error || `Proxy error ${res.status}`);
+  }
+  /* 2) Local dev proxy — also builds the prompt from the payload server-side. */
+  if (await proxyAlive()) {
+    const res = await fetch(`${PROXY}/api/analyze`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...payload, apiKey: getStoredKey() }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.text) return data.text;
+    throw new Error(data.error || `Proxy error ${res.status}`);
+  }
+  throw new Error("no_server: Analysis needs the Signal server. Please use the hosted app.");
+}
+const analyzeViaProxy = (params) => callProxy({ params });
+
 /* Parse the <chart_data>…</chart_data> block from Gemini's dual-format output */
 function parseChartData(text) {
   if (!text) return null;
@@ -1310,86 +1342,24 @@ function stripHi(text) {
 async function analyzeWindow(card, clientLabel, month, year, apiKey, signalKeyword, market) {
   const plats = platsFor(card.parent);
   const socialPlats = socialPlatsFor(card.parent);
-  const hasTikTok = plats.includes("TikTok");
-  const mkt = (MARKETS[market] && MARKETS[market].label) || "South Africa";
+  const category = (BRANDS[card.parent] && BRANDS[card.parent].category) || card.parent;
 
-  const handles = [
-    card.ig     && `Instagram: ${card.ig}`,
-    card.fb     && `Facebook: ${card.fb}`,
-    card.x      && `X/Twitter: ${card.x}`,
-    card.tiktok && hasTikTok && `TikTok: ${card.tiktok}`,
-    card.web    && `Website: ${card.web}`,
-  ].filter(Boolean).join("\n");
+  /* Prompt (the methodology) is built server-side in /api/analyze — we send only
+     structured params, so the Signal playbook never ships to the browser. */
+  const params = {
+    name: card.name, ig: card.ig, fb: card.fb, x: card.x, tiktok: card.tiktok, web: card.web,
+    category, market: market || "sa", month, year,
+    signalKeyword: signalKeyword || "", clientLabel,
+  };
 
-  const signalInstruction = signalKeyword
-    ? `\n10. SIGNAL DETECTION — Search specifically for any content by ${card.name} related to the keyword/theme "${signalKeyword}" during ${MONTHS[month]} ${year} (e.g. new product launch, flavour, campaign, collab). Set signalMatch:true if found, signalNote to a 1-2 sentence description, and signalLink to the URL of the specific post or article where it was found. If not found, signalMatch:false, signalNote:"No matching content found.", signalLink:"".`
-    : "";
-
-  const snapshotRows = plats.map(p =>
-    `    {"platform":"${p}","role":"Primary|Light|Inactive","comment":"<=4 words"}`).join(",\n");
-  const freqRow = socialPlats.map(p => `"${p}":<est. posts/month>`).join(",");
-
-  const prompt =
-`You are a senior brand strategist at John Joseph building a monthly competitor intelligence report for the ${mkt} market (category: ${clientLabel}).
-
-Use Google Search to research the competitor brand "${card.name}" in the ${mkt} market.
-${handles ? `Search these channels for recent activity:\n${handles}` : ""}
-Reporting period: ${MONTHS[month]} ${year}.
-
-Search for:
-1. Platform activity and posting patterns on ${plats.join(", ")}${hasTikTok ? ". If the brand has no TikTok presence, set its TikTok role to Inactive with comment \"No TikTok presence\"" : ""}
-2. Recent campaigns, promotions, or product launches in ${mkt}
-3. Content themes and creative direction
-4. Audience sentiment and engagement signals
-5. A 2-sentence executive summary of their overall ${MONTHS[month]} ${year} strategy
-6. 2-3 key active campaigns (name + one-sentence description each)
-7. One representative content example: date, platform, format, short caption excerpt, estimated engagement, visual description
-8. Multi-dimensional creative effectiveness scores 1-10: platformNative, culturalRelevance, visualDistinctiveness, strategicClarity, engagementPotential
-9. One sentence on their biggest whitespace/missed opportunity this period, and one sentence strategic recommendation${signalInstruction}
-
-Begin with a 2-3 sentence strategic insight (plain text paragraph, no headers).
-IMPORTANT: In the strategic insight AND the executiveSummary, wrap every key activity — campaign names, event names, sponsorships, product launches, collabs (e.g. **Surprisingly Good Sets**, **LIV Golf**, **FIFA World Cup**) — in **double asterisks** so they can be highlighted. Use them on the 2-5 most important named activities only.
-
-Then output EXACTLY this block:
-
-<chart_data>
-{
-  "snapshot":[
-${snapshotRows}
-  ],
-  "themes":{"Promotions":<0-100>,"Product":<0-100>,"Serves":<0-100>,"Seasonal":<0-100>,"Lifestyle":<0-100>},
-  "sentiment":{"positive":<0-100>,"neutral":<0-100>,"negative":<0-100>},
-  "postFrequency":{${freqRow}},
-  "effectivenessScore":<1.0-10.0>,
-  "executiveSummary":"2-3 sentence paragraph on their overall strategy this period",
-  "keyCampaigns":[{"title":"Campaign name","description":"One sentence description"}],
-  "contentSnapshot":{"date":"DD Month YYYY","platform":"Instagram|Facebook|X","format":"Reel|Video|Static|Text","caption":"Short caption excerpt...","engagement":"e.g. 8.5K likes, 320 comments","visual":"Brief description of the visual"},
-  "creativeScores":{"platformNative":<1-10>,"culturalRelevance":<1-10>,"visualDistinctiveness":<1-10>,"strategicClarity":<1-10>,"engagementPotential":<1-10>},
-  "whitespace":"One sentence on their biggest missed opportunity",
-  "recommendations":"One sentence action recommendation for ${clientLabel} to exploit",
-  "signalMatch":<true|false>,
-  "signalNote":"Description of signal match OR No matching content found.",
-  "signalLink":"URL of the post/article where the signal was found, or empty string"
-}
-</chart_data>
-
-RULES:
-- role = how central that platform is to their brand strategy (Primary/Light/Inactive)
-- comment = terse 1-4 word descriptor
-- theme values = relative content pillar weight, highest ~85; use real data
-- sentiment positive+neutral+negative must sum to exactly 100
-- effectivenessScore = overall creative effectiveness 1.0–10.0
-- creativeScores = integer 1-10 each dimension
-- Base all values on real search results; use informed estimates where search data is incomplete`;
-
-  let raw = await callGemini(prompt, apiKey);
+  let raw = await analyzeViaProxy(params);
   incrementGeminiCalls();
   let cd  = parseChartData(raw);
   /* Grounding occasionally returns partial/truncated output — retry up to twice */
   for (let attempt = 0; !cd && attempt < 2; attempt++) {
     console.info(`[analyzeWindow] No chart_data — retry ${attempt + 1}/2`);
     await new Promise(r => setTimeout(r, 4000));
-    raw = await callGemini(prompt, apiKey);
+    raw = await analyzeViaProxy(params);
     incrementGeminiCalls();
     cd  = parseChartData(raw);
   }
@@ -1472,36 +1442,14 @@ Exactly 4 real competing brands. Include their actual Instagram URL if findable.
 
 /* ---- auditCompetitor: month-by-month social audit over a period range ---- */
 async function auditCompetitor(name, fromMonth, fromYear, toMonth, toYear, apiKey) {
-  const fromLbl = `${MONTHS[fromMonth]} ${fromYear}`;
-  const toLbl   = `${MONTHS[toMonth]} ${toYear}`;
-  const prompt =
-`You are a senior brand strategist building a period-over-period social media audit for the South African market.
+  /* Prompt is built server-side in /api/analyze from these params (IP protection). */
+  const audit = { name, fromMonth, fromYear, toMonth, toYear, market: "sa" };
 
-Use Google Search to research the brand "${name}" in South Africa across the period ${fromLbl} to ${toLbl} (inclusive).
-
-For EACH month in the range, find: the dominant campaign or activity, key content themes, and any notable launches, sponsorships or events.
-In every summary, wrap key activity names (campaigns, events, launches, collabs) in **double asterisks**.
-
-Output EXACTLY this block (one entry per month, in chronological order):
-
-<chart_data>
-{
-  "timeline":[
-    {"month":"Month YYYY","headline":"<=8 word headline of the month's focus","summary":"2 sentence summary with **key activities** marked","activityLevel":<1-10>}
-  ],
-  "trend":"2-3 sentence overall trend analysis across the period, with **key activities** marked"
-}
-</chart_data>
-
-RULES:
-- activityLevel = posting/campaign intensity that month, 1-10
-- Base on real search results; use informed estimates where data is incomplete`;
-
-  let raw = await callGemini(prompt, apiKey);
+  let raw = await callProxy({ audit });
   let cd  = parseChartData(raw);
   if (!cd) {
     await new Promise(r => setTimeout(r, 4000));
-    raw = await callGemini(prompt, apiKey);
+    raw = await callProxy({ audit });
     cd  = parseChartData(raw);
   }
   if (!cd || !Array.isArray(cd.timeline)) throw new Error("No <chart_data> block in Gemini response.");
