@@ -181,14 +181,28 @@
       <select id="industry" required>
         <option value="" disabled selected>Select your industry…</option>
         <option>Alcohol &amp; Beverages</option>
+        <option>Food &amp; Beverage (FMCG)</option>
         <option>QSR / Fast Food</option>
         <option>Retail &amp; E-Commerce</option>
-        <option>Telecoms</option>
+        <option>Fashion &amp; Apparel</option>
         <option>Beauty &amp; Cosmetics</option>
         <option>Skincare</option>
         <option>Haircare</option>
+        <option>Telecoms</option>
+        <option>Technology / SaaS</option>
+        <option>Financial Services / Banking</option>
+        <option>Travel &amp; Hospitality</option>
+        <option>Health &amp; Pharma</option>
+        <option>Automotive</option>
+        <option>Media &amp; Entertainment</option>
+        <option>Sports &amp; Fitness</option>
+        <option>Gaming</option>
+        <option>Real Estate</option>
+        <option>Marketing / Agency</option>
         <option>Other</option>
       </select>
+      <input type="text" id="industry_other" placeholder="Tell us your industry…"
+        style="display:none; margin-top:10px;" />
     </div>
 
     <div class="field">
@@ -292,18 +306,32 @@
   }
   initGoogle();
 
+  /* Show a free-text box when "Other" industry is chosen */
+  document.getElementById('industry').addEventListener('change', function () {
+    var other = document.getElementById('industry_other');
+    if (this.value === 'Other') { other.style.display = 'block'; other.focus(); }
+    else { other.style.display = 'none'; other.value = ''; }
+  });
+
   document.getElementById('step2').addEventListener('submit', async function (e) {
     e.preventDefault();
     var errBox = document.getElementById('err-box');
     errBox.style.display = 'none';
 
     var companyRole = document.getElementById('company_role').value.trim();
-    var industry    = document.getElementById('industry').value;
+    var industrySel = document.getElementById('industry').value;
+    var industryOther = document.getElementById('industry_other').value.trim();
+    var industry    = industrySel === 'Other' ? industryOther : industrySel;
     var teamSize    = document.getElementById('team_size').value;
     var reportTime  = document.getElementById('report_time').value;
 
-    if (!companyRole || !industry || !teamSize || !reportTime) {
+    if (!companyRole || !industrySel || !teamSize || !reportTime) {
       errBox.textContent = 'Please fill in all the fields above.';
+      errBox.style.display = 'block';
+      return;
+    }
+    if (industrySel === 'Other' && !industryOther) {
+      errBox.textContent = 'Please type your industry in the box.';
       errBox.style.display = 'block';
       return;
     }
