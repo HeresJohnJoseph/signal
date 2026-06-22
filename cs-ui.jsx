@@ -805,7 +805,8 @@ function SocialAuditPanel({ show, onClose, cards, apiKey, year }) {
 
 /* ---------- Sidebar control panel ---------- */
 function Sidebar(props) {
-  const { brandSel, setBrandSel, month, setMonth, year, setYear, runState, onRun,
+  const { marketSel = "sa", setMarket,
+          brandSel, setBrandSel, month, setMonth, year, setYear, runState, onRun,
           colors, onGenerate, busy, canExport,
           signalKeyword, setSignalKeyword,
           onGenerateReport, reportBusy, canReport,
@@ -839,23 +840,45 @@ function Sidebar(props) {
         <div className="sb-rule"></div>
 
         <div className="sb-block">
-          <div className="step-eyebrow"><span className="num">01</span><span className="lbl">Select Brand</span></div>
+          <div className="step-eyebrow"><span className="num">01</span><span className="lbl">Select Market</span></div>
+          <div className="market-row">
+            {Object.entries(MARKETS).map(([mk, meta]) => (
+              <button key={mk}
+                className={"market-btn" + (marketSel === mk ? " sel" : "")}
+                onClick={() => setMarket && setMarket(mk)}>
+                {meta.short}
+              </button>
+            ))}
+          </div>
+          <div className="market-name">{(MARKETS[marketSel] || MARKETS.sa).label}</div>
+        </div>
+
+        <div className="sb-block">
+          <div className="step-eyebrow"><span className="num">02</span><span className="lbl">{marketSel === "sa" ? "Select Brand" : "Select Category"}</span></div>
           <div className="brand-list">
-            {Object.entries(BRAND_CATEGORIES).map(([catKey, catMeta]) => {
-              const brandsInCat = Object.values(BRANDS).filter(b => b.category === catKey);
-              if (!brandsInCat.length) return null;
-              return (
-                <div key={catKey} className="brand-group">
-                  <div className="brand-group-label">{catMeta.label}</div>
-                  {brandsInCat.map(b => brandRow(b.key, b.name, colors[b.key] || b.color))}
-                </div>
-              );
-            })}
+            {marketSel === "sa"
+              ? Object.entries(BRAND_CATEGORIES).map(([catKey, catMeta]) => {
+                  const brandsInCat = Object.values(BRANDS).filter(b => b.category === catKey);
+                  if (!brandsInCat.length) return null;
+                  return (
+                    <div key={catKey} className="brand-group">
+                      <div className="brand-group-label">{catMeta.label}</div>
+                      {brandsInCat.map(b => brandRow(b.key, b.name, colors[b.key] || b.color))}
+                    </div>
+                  );
+                })
+              : Object.entries(BRAND_CATEGORIES).map(([catKey, catMeta]) => {
+                  /* US/UK: one entry per category (tabs are category-level) */
+                  const rep = Object.values(BRANDS).find(b => b.category === catKey);
+                  if (!rep) return null;
+                  return brandRow(rep.key, catMeta.label, catMeta.color || colors[rep.key]);
+                })
+            }
           </div>
         </div>
 
         <div className="sb-block">
-          <div className="step-eyebrow"><span className="num">02</span><span className="lbl">Reporting Period</span></div>
+          <div className="step-eyebrow"><span className="num">03</span><span className="lbl">Reporting Period</span></div>
           <div className="period-row">
             <div className="col-month">
               <label className="field-label">Month</label>
@@ -871,7 +894,7 @@ function Sidebar(props) {
         </div>
 
         <div className="sb-block">
-          <div className="step-eyebrow"><span className="num">03</span><span className="lbl">Signal Keyword</span></div>
+          <div className="step-eyebrow"><span className="num">04</span><span className="lbl">Signal Keyword</span></div>
           <input
             className="sb-input signal-input"
             type="text"

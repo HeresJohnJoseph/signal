@@ -31,6 +31,7 @@ function App() {
   }
   const [signalKeyword, setSignalKeyword] = useState(() => localStorage.getItem("cs_signal_kw") || "");
 
+  const [marketSel, setMarketSel] = useState(() => localStorage.getItem("cs_market") || "sa");
   const [brandSel, setBrandSel] = useState("hunters");
   const [month, setMonth] = useState(() => new Date().getMonth());
   const [year, setYear] = useState(() => new Date().getFullYear());
@@ -46,7 +47,7 @@ function App() {
   const handleSetApifyToken = (t) => { saveApifyToken(t); setApifyToken(t); };
   const refreshQuota = () => setGeminiCalls(getGeminiCallsToday());
 
-  const brandLabel = BRANDS[brandSel].name;
+  const brandLabel = contextLabel(brandSel, marketSel);
   const brandCat = BRANDS[brandSel].cat;
   const ctxColor = colors[brandSel];
   const hasCards = cards.length > 0;
@@ -55,6 +56,14 @@ function App() {
   const chooseBrand = (b) => { if (b !== brandSel) { setBrandSel(b); setRunState("idle"); setCards([]); setFetchErr(null); } };
   const chooseMonth = (m) => { setMonth(m); invalidate(); };
   const chooseYear  = (y) => { setYear(y); invalidate(); };
+  const chooseMarket = (m) => {
+    if (m === marketSel) return;
+    localStorage.setItem("cs_market", m);
+    setMarketSel(m);
+    /* US/UK have no per-brand alcohol tabs — snap an alcohol brand to a category default */
+    if (m !== "sa" && BRANDS[brandSel].category === "alcohol" && brandSel !== "hunters") setBrandSel("hunters");
+    setRunState("idle"); setCards([]); setFetchErr(null);
+  };
 
   const onRun = async () => {
     setRunState("running");
@@ -75,7 +84,7 @@ function App() {
     }
 
     try {
-      const fetched = await loadSheetCompetitors(brandSel, colors, month, year);
+      const fetched = await loadSheetCompetitors(brandSel, colors, month, year, marketSel);
       setCards(fetched);
       setRunState("ready");
       if (window.posthog) window.posthog.capture('run_snapshot', { brand: brandSel, competitor_count: fetched.length, month, year });
@@ -86,7 +95,7 @@ function App() {
           if (i > 0) await new Promise(r => setTimeout(r, 12000)); /* 12s stagger — Gemini free tier is 10 RPM */
           setCards(prev => prev.map((c, ci) => ci === i ? { ...c, analyzing: true } : c));
           try {
-            const res = await analyzeWindow(fetched[i], BRANDS[brandSel].name, month, year, apiKey, signalKeyword);
+            const res = await analyzeWindow(fetched[i], brandLabel, month, year, apiKey, signalKeyword, marketSel);
             setCards(prev => prev.map((c, ci) => ci === i ? { ...c, analyzing: false, analyzed: true, snapshot: res.snapshot, themes: res.themes, insight: res.insight, sentiment: res.sentiment, postFrequency: res.postFrequency, effectivenessScore: res.effectivenessScore, executiveSummary: res.executiveSummary, keyCampaigns: res.keyCampaigns, contentSnapshot: res.contentSnapshot, creativeScores: res.creativeScores, whitespace: res.whitespace, recommendations: res.recommendations, signalMatch: res.signalMatch, signalNote: res.signalNote, signalLink: res.signalLink } : c));
             refreshQuota();
             if (window.posthog) window.posthog.capture('card_analyzed', { brand: brandSel, competitor: fetched[i].name });
@@ -97,7 +106,7 @@ function App() {
               /* silent retry: wait out the rate-limit window, try once more */
               await new Promise(r => setTimeout(r, 65000));
               try {
-                const res = await analyzeWindow(fetched[i], BRANDS[brandSel].name, month, year, apiKey, signalKeyword);
+                const res = await analyzeWindow(fetched[i], brandLabel, month, year, apiKey, signalKeyword, marketSel);
                 setCards(prev => prev.map((c, ci) => ci === i ? { ...c, analyzing: false, analyzed: true, snapshot: res.snapshot, themes: res.themes, insight: res.insight, sentiment: res.sentiment, postFrequency: res.postFrequency, effectivenessScore: res.effectivenessScore, executiveSummary: res.executiveSummary, keyCampaigns: res.keyCampaigns, contentSnapshot: res.contentSnapshot, creativeScores: res.creativeScores, whitespace: res.whitespace, recommendations: res.recommendations, signalMatch: res.signalMatch, signalNote: res.signalNote, signalLink: res.signalLink } : c));
                 refreshQuota();
                 if (window.posthog) window.posthog.capture('card_analyzed', { brand: brandSel, competitor: fetched[i].name });
@@ -126,7 +135,7 @@ function App() {
     const card = cards[ci];
     patchCard(ci, { analyzing: true, analyzeError: null });
     try {
-      const res = await analyzeWindow(card, brandLabel, month, year, apiKey, signalKeyword);
+      const res = await analyzeWindow(card, brandLabel, month, year, apiKey, signalKeyword, marketSel);
       patchCard(ci, { analyzing: false, analyzed: true, snapshot: res.snapshot, themes: res.themes, insight: res.insight, sentiment: res.sentiment, postFrequency: res.postFrequency, effectivenessScore: res.effectivenessScore, executiveSummary: res.executiveSummary, keyCampaigns: res.keyCampaigns, contentSnapshot: res.contentSnapshot, creativeScores: res.creativeScores, whitespace: res.whitespace, recommendations: res.recommendations, signalMatch: res.signalMatch, signalNote: res.signalNote, signalLink: res.signalLink });
       if (window.posthog) window.posthog.capture('card_analyzed', { brand: brandSel, competitor: card.name });
       refreshQuota();
@@ -137,7 +146,7 @@ function App() {
         /* silent retry: wait out the rate-limit window, try once more */
         await new Promise(r => setTimeout(r, 65000));
         try {
-          const res = await analyzeWindow(card, brandLabel, month, year, apiKey, signalKeyword);
+          const res = await analyzeWindow(card, brandLabel, month, year, apiKey, signalKeyword, marketSel);
           patchCard(ci, { analyzing: false, analyzed: true, snapshot: res.snapshot, themes: res.themes, insight: res.insight, sentiment: res.sentiment, postFrequency: res.postFrequency, effectivenessScore: res.effectivenessScore, executiveSummary: res.executiveSummary, keyCampaigns: res.keyCampaigns, contentSnapshot: res.contentSnapshot, creativeScores: res.creativeScores, whitespace: res.whitespace, recommendations: res.recommendations, signalMatch: res.signalMatch, signalNote: res.signalNote, signalLink: res.signalLink });
           if (window.posthog) window.posthog.capture('card_analyzed', { brand: brandSel, competitor: card.name });
           refreshQuota();
@@ -232,6 +241,7 @@ function App() {
     <div className="app">
       <Preloader cards={cards} runState={runState} />
       <Sidebar
+        marketSel={marketSel} setMarket={chooseMarket}
         brandSel={brandSel} setBrandSel={chooseBrand}
         month={month} setMonth={chooseMonth} year={year} setYear={chooseYear}
         runState={runState} onRun={onRun} colors={colors}
@@ -249,7 +259,7 @@ function App() {
         <div className="stage-inner">
           <div className="stage-head">
             <div>
-              <div className="sh-eyebrow">John Joseph · Strategy Intelligence</div>
+              <div className="sh-eyebrow">John Joseph · Strategy Intelligence · {MARKETS[marketSel] ? MARKETS[marketSel].label : "South Africa"}</div>
               <div className="sh-title">{brandLabel} · Signal</div>
             </div>
             <div className="sh-meta">

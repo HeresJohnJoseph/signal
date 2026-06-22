@@ -1051,3 +1051,15 @@ image-slot[data-kind="avatar"]::part(ring) { border: 1.5px solid rgba(255,255,25
   .stage-msg p { font-size: 13px; }
   .cat-slide { padding: 20px 16px 22px; }
 }
+
+/* Market selector (segmented) */
+.market-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.market-btn {
+  padding: 10px 0; border-radius: 9px; cursor: pointer;
+  border: 1px solid var(--border); background: var(--surface-2);
+  color: var(--text-2); font-family: var(--mono); font-size: 12px; font-weight: 700;
+  letter-spacing: 0.08em; transition: background .12s, color .12s, border-color .12s;
+}
+.market-btn:hover { background: var(--surface-3); color: var(--text-1); }
+.market-btn.sel { background: var(--accent-dim); border-color: rgba(255,85,0,0.45); color: var(--accent-lt); }
+.market-name { margin-top: 8px; font-family: var(--mono); font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-3); }

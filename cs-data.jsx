@@ -38,7 +38,21 @@ function platsFor(brandSel) {
 /* Social platforms only (posting frequency) — Website isn't a feed */
 function socialPlatsFor(brandSel) { return platsFor(brandSel).filter(p => p !== "Website"); }
 
-/* ---- Google Sheet tab names ---- */
+/* ---- Markets ----
+   South Africa uses the original (unprefixed) per-brand tabs.
+   US / UK use prefixed, category-level tabs, e.g. "US QSR Competitor Links". */
+const MARKETS = {
+  sa: { label: "South Africa",   short: "SA", prefix: "" },
+  us: { label: "United States",  short: "US", prefix: "US " },
+  uk: { label: "United Kingdom", short: "UK", prefix: "UK " },
+};
+/* Proper-cased category names as they appear in the US/UK tab titles */
+const CAT_TAB = {
+  alcohol: "Alcohol", qsr: "QSR", retail: "Retail", telecoms: "Telecoms",
+  beauty: "Beauty", skincare: "Skincare", haircare: "Haircare",
+};
+
+/* ---- Google Sheet tab names (South Africa) ---- */
 const SHEET_ID = "1zIEipR_aJMiDk9XoT7LmEnXu4yg6cNgF";
 const SHEET_TABS = {
   hunters:  "Hunters Competitor Links",
@@ -51,6 +65,20 @@ const SHEET_TABS = {
   skincare: "Skincare Competitor Links",
   haircare: "Haircare Competitor Links",
 };
+
+/* Resolve the sheet tab name for a brand/category in a given market */
+function tabFor(brandSel, market) {
+  if (!market || market === "sa") return SHEET_TABS[brandSel];
+  const prefix = (MARKETS[market] && MARKETS[market].prefix) || "";
+  const cat = BRANDS[brandSel] && BRANDS[brandSel].category;
+  return `${prefix}${CAT_TAB[cat] || cat} Competitor Links`;
+}
+/* Human label for the current context (brand in SA, category in US/UK) */
+function contextLabel(brandSel, market) {
+  if (!market || market === "sa") return BRANDS[brandSel] ? BRANDS[brandSel].name : brandSel;
+  const cat = BRANDS[brandSel] && BRANDS[brandSel].category;
+  return (BRAND_CATEGORIES[cat] && BRAND_CATEGORIES[cat].label) || cat;
+}
 
 /* parseCSV: handles quoted fields with commas */
 function parseCSV(text) {
@@ -84,10 +112,11 @@ const SHEET_GIDS = {
   haircare: null,
 };
 
-async function fetchSheetTab(brandSel, filterMonth, filterYear) {
-  const tabName = SHEET_TABS[brandSel];
+async function fetchSheetTab(brandSel, filterMonth, filterYear, market) {
+  const tabName = tabFor(brandSel, market);
   if (!tabName) throw new Error("Unknown brand: " + brandSel);
-  const gid = SHEET_GIDS[brandSel];
+  /* gid export is faster but only mapped for SA tabs; US/UK use gviz-by-name */
+  const gid = (!market || market === "sa") ? SHEET_GIDS[brandSel] : null;
   const url = gid
     ? `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`
     : `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(tabName)}`;
@@ -109,10 +138,13 @@ async function fetchSheetTab(brandSel, filterMonth, filterYear) {
     : null;
 
   const namedRows = dataRows.filter(r => r[0] && r[0].replace(/^"|"$/g, "").trim());
+  const isMonthLike = (s) => /^[a-z]+\s+\d{4}$/.test(s); /* "june 2026" */
   const matched = namedRows.filter(r => {
     if (!targetMonth) return true;
     const rm = ((monthCol >= 0 ? r[monthCol] : r[7]) || "").replace(/^"|"$/g, "").trim().toLowerCase();
-    return !rm || rm === targetMonth; /* include rows with no month set OR exact match */
+    /* include rows with no month, junk/non-month values, OR an exact match;
+       only a real month that differs from the target excludes a row */
+    return !rm || !isMonthLike(rm) || rm === targetMonth;
   });
 
   /* No exact-month rows but the tab has data:
@@ -652,17 +684,19 @@ function loadDemoCompetitors(brandSel) {
   return set.map(c => ({ ...c, posts: [...c.posts], snapshot: c.snapshot.map(s => ({ ...s })), themes: c.themes.map(t => ({ ...t })) }));
 }
 
-async function loadSheetCompetitors(brandSel, colors, month, year) {
-  const cacheKey = `${brandSel}-${month}-${year}`;
+async function loadSheetCompetitors(brandSel, colors, month, year, market) {
+  const mk = market || "sa";
+  const cacheKey = `${mk}-${brandSel}-${month}-${year}`;
   if (_sheetCache[cacheKey]) return _sheetCache[cacheKey];
-  const raw = await fetchSheetTab(brandSel, month, year);
+  const raw = await fetchSheetTab(brandSel, month, year, mk);
   const cards = raw.map(c => freshCard(c, colors[brandSel], brandSel, "synced"));
   _sheetCache[cacheKey] = cards;
   return cards;
 }
 
 function invalidateSheetCache(brandSel) {
-  if (brandSel) delete _sheetCache[brandSel];
+  /* brandSel may appear anywhere in the composite "{market}-{brand}-{m}-{y}" key */
+  if (brandSel) Object.keys(_sheetCache).forEach(k => { if (k.includes(`-${brandSel}-`)) delete _sheetCache[k]; });
   else Object.keys(_sheetCache).forEach(k => delete _sheetCache[k]);
 }
 
@@ -939,10 +973,11 @@ function stripHi(text) {
 }
 
 /* ---- analyzeWindow: grounded brand window analysis ---- */
-async function analyzeWindow(card, clientLabel, month, year, apiKey, signalKeyword) {
+async function analyzeWindow(card, clientLabel, month, year, apiKey, signalKeyword, market) {
   const plats = platsFor(card.parent);
   const socialPlats = socialPlatsFor(card.parent);
   const hasTikTok = plats.includes("TikTok");
+  const mkt = (MARKETS[market] && MARKETS[market].label) || "South Africa";
 
   const handles = [
     card.ig     && `Instagram: ${card.ig}`,
@@ -961,15 +996,15 @@ async function analyzeWindow(card, clientLabel, month, year, apiKey, signalKeywo
   const freqRow = socialPlats.map(p => `"${p}":<est. posts/month>`).join(",");
 
   const prompt =
-`You are a senior brand strategist at John Joseph building a monthly competitor intelligence report for the South African alcohol brand "${clientLabel}".
+`You are a senior brand strategist at John Joseph building a monthly competitor intelligence report for the ${mkt} market (category: ${clientLabel}).
 
-Use Google Search to research the competitor brand "${card.name}" in the South African market.
+Use Google Search to research the competitor brand "${card.name}" in the ${mkt} market.
 ${handles ? `Search these channels for recent activity:\n${handles}` : ""}
 Reporting period: ${MONTHS[month]} ${year}.
 
 Search for:
 1. Platform activity and posting patterns on ${plats.join(", ")}${hasTikTok ? ". If the brand has no TikTok presence, set its TikTok role to Inactive with comment \"No TikTok presence\"" : ""}
-2. Recent campaigns, promotions, or product launches in South Africa
+2. Recent campaigns, promotions, or product launches in ${mkt}
 3. Content themes and creative direction
 4. Audience sentiment and engagement signals
 5. A 2-sentence executive summary of their overall ${MONTHS[month]} ${year} strategy
