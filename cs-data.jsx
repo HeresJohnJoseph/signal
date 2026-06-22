@@ -778,12 +778,13 @@ async function fetchSharedConfig() {
 function getApifyToken() { return localStorage.getItem('signal_apify_token') || ''; }
 function saveApifyToken(t) { localStorage.setItem('signal_apify_token', t); }
 
-async function fetchApifyCreative(igUrl, apifyToken) {
+async function fetchApifyCreative(igUrl, apifyToken, month, year) {
   if (!igUrl || !apifyToken) return [];
   const handle = igUrl.replace(/.*instagram\.com\//, '').replace(/\/+$/, '').replace(/^@/, '');
   if (!handle) return [];
 
-  /* instagram-scraper needs ≥1GB memory; 256MB makes runs die instantly */
+  /* Pull a wider pool (up to 48) so we can filter down to the reporting month.
+     instagram-scraper needs ≥1GB memory; 256MB makes runs die instantly. */
   const res = await fetch(
     `https://api.apify.com/v2/acts/apify~instagram-scraper/run-sync-get-dataset-items?timeout=240&memory=1024`,
     {
@@ -792,7 +793,7 @@ async function fetchApifyCreative(igUrl, apifyToken) {
       body: JSON.stringify({
         directUrls: [`https://www.instagram.com/${handle}/`],
         resultsType: 'posts',
-        resultsLimit: 6,
+        resultsLimit: 48,
         addParentData: false,
       })
     }
@@ -810,11 +811,23 @@ async function fetchApifyCreative(igUrl, apifyToken) {
   }
   const items = await res.json();
   if (!Array.isArray(items)) throw new Error("Apify returned no posts for @" + handle);
-  return items
-    .filter(p => !p.error)
-    .slice(0, 6)
-    .map(p => p.displayUrl || p.imageUrl || p.thumbnailUrl || (Array.isArray(p.images) ? p.images[0] : '') || '')
-    .filter(Boolean);
+
+  const imgOf = (p) => p.displayUrl || p.imageUrl || p.thumbnailUrl || (Array.isArray(p.images) ? p.images[0] : '') || '';
+  const posts = items.filter(p => !p.error && imgOf(p));
+
+  /* Prefer posts FROM the reporting month; fall back to most-recent if none.
+     Apify returns each post's `timestamp` (ISO 8601). */
+  let pool = posts;
+  if (month != null && year != null) {
+    const inMonth = posts.filter(p => {
+      const t = p.timestamp ? new Date(p.timestamp) : null;
+      return t && !isNaN(t) && t.getUTCMonth() === month && t.getUTCFullYear() === year;
+    });
+    if (inMonth.length) pool = inMonth;
+  }
+  /* newest first within the chosen pool */
+  pool.sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
+  return pool.slice(0, 6).map(imgOf).filter(Boolean);
 }
 function saveKey(k) { localStorage.setItem(LS_KEY, k.trim()); }
 function clearKey() { localStorage.removeItem(LS_KEY); }

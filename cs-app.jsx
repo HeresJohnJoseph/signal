@@ -181,7 +181,7 @@ function App() {
 
     patchCard(ci, { loadingCreative: true });
     try {
-      const urls = await fetchApifyCreative(card.ig, token);
+      const urls = await fetchApifyCreative(card.ig, token, month, year);
       urls.forEach((url, idx) => onSetPost(ci, idx, url));
       patchCard(ci, { loadingCreative: false });
       if (window.posthog) window.posthog.capture('load_creative', { brand: brandSel, competitor: card.name });
