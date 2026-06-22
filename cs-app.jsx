@@ -71,7 +71,7 @@ function App() {
 
     /* Demo mode — load pre-analyzed cards instantly, no API */
     if (DEMO_MODE) {
-      const demo = loadDemoCompetitors(brandSel);
+      const demo = loadDemoCompetitors(brandSel, marketSel);
       if (demo && demo.length) {
         setCards(demo);
         setRunState("ready");
