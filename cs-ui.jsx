@@ -641,8 +641,8 @@ function MethodologyPanel({ show, onClose }) {
         <div className="meth-body">
           <div className="meth-section">
             <div className="meth-sec-title">How it works</div>
-            <p>Signal uses <strong>Gemini 2.5 Flash</strong> with <strong>Google Search grounding</strong> to conduct live competitor research for the selected reporting month. Each analysis pull draws on indexed social posts, press coverage, and brand activity — not static training data. Results are returned as structured intelligence covering social presence, content strategy, creative effectiveness, and audience sentiment.</p>
-            <p>Data is sourced from your live <strong>Competitor Tracker Google Sheet</strong>. The sheet defines which competitors to profile per brand, their social handles, and the reporting month each row applies to. Run Snapshot fetches only the rows matching your selected month and year.</p>
+            <p>Signal runs <strong>live web research</strong> through its proprietary intelligence engine for the selected reporting month — drawing on current social activity, press coverage, and brand signals rather than static data. Results are returned as structured intelligence covering social presence, content strategy, creative effectiveness, and audience sentiment.</p>
+            <p>You define your competitor set and reporting period; Signal handles the research, scoring, and synthesis behind the scenes.</p>
           </div>
 
           <div className="meth-section">
