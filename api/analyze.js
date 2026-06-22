@@ -56,7 +56,7 @@ export default async function handler(req, res) {
         body: JSON.stringify({
           tools: [{ google_search: {} }],
           contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.3, maxOutputTokens: 4096 },
+          generationConfig: { temperature: 0.3, maxOutputTokens: 8192 },
         }),
       }
     );

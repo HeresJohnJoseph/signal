@@ -1,14 +1,20 @@
 /* ============================================================
    Signal — Signup → Google Sheet sync (Google Apps Script)
-   REFERENCE FILE — paste into Extensions → Apps Script on the
-   signups sheet, then Deploy → New deployment → Web App
-   (Execute as: Me · Who has access: Anyone).
+   REFERENCE FILE — paste into Extensions → Apps Script, then
+   Deploy → Manage deployments → Edit → New version → Deploy
+   (keeps the same URL). Execute as: Me · Who has access: Anyone.
+
+   Writes every signup to a dedicated "Signups" tab in the
+   tracker sheet, so leads live in one clean, sortable list.
    ============================================================ */
+
+var TRACKER_SHEET_ID = '1zIEipR_aJMiDk9XoT7LmEnXu4yg6cNgF';
 
 function doPost(e) {
   try {
     const data = JSON.parse(e.postData.contents);
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    const ss = SpreadsheetApp.openById(TRACKER_SHEET_ID);
+    const sheet = ss.getSheetByName('Signups') || ss.insertSheet('Signups');
 
     // Add header row if sheet is empty
     if (sheet.getLastRow() === 0) {

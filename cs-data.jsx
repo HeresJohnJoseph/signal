@@ -879,7 +879,7 @@ async function callGeminiBrowser(prompt, apiKey, attempt = 0) {
     body: JSON.stringify({
       tools: [{ google_search: {} }],
       contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.3, maxOutputTokens: 4096 },
+      generationConfig: { temperature: 0.3, maxOutputTokens: 8192 },
     }),
   });
 
@@ -1064,11 +1064,12 @@ RULES:
   let raw = await callGemini(prompt, apiKey);
   incrementGeminiCalls();
   let cd  = parseChartData(raw);
-  if (!cd) {
-    /* One automatic retry — grounding sometimes returns partial output on first call */
-    console.info("[analyzeWindow] No chart_data — retrying once");
+  /* Grounding occasionally returns partial/truncated output — retry up to twice */
+  for (let attempt = 0; !cd && attempt < 2; attempt++) {
+    console.info(`[analyzeWindow] No chart_data — retry ${attempt + 1}/2`);
     await new Promise(r => setTimeout(r, 4000));
     raw = await callGemini(prompt, apiKey);
+    incrementGeminiCalls();
     cd  = parseChartData(raw);
   }
   if (!cd) throw new Error("No <chart_data> block in Gemini response.");
