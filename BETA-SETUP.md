@@ -1,65 +1,66 @@
-# Signal — Beta Setup
+# Signal — Beta Launch
 
-How to open Signal to a small group of invited testers. The code is done;
-these are the one-time infrastructure + secret steps only you can do.
+How to open Signal to invited testers. The build is done and verified; what
+remains is operational (adding testers, one Apps Script redeploy). The live
+beta URL is **https://signal-eight-opal.vercel.app**.
 
 ## How it works
 - **Serverless proxy** (`api/analyze.js`) holds the Gemini key server-side, so testers
-  never see or enter an API key. Requires hosting that runs server code — **Vercel**,
-  not GitHub Pages.
-- **Email allowlist** — only Google accounts whose email is in the sheet's `Allowlist`
-  tab get in. Everyone else gets a "you're on the waitlist" screen. Enforced both at
-  sign-in and at the proxy.
-- **Graceful fallback** — demo mode (`?demo=1`), local dev, and GitHub Pages still work
-  unchanged; the proxy is only used when it's actually deployed.
+  never see or enter an API key, and the analysis methodology never ships to the browser.
+  Requires server hosting — **Vercel**, not GitHub Pages.
+- **Access gate** — only Google accounts whose email is in the sheet's `Allowlist` tab
+  (free beta) **or** `Pro` tab (paid) get in. Everyone else sees a waitlist + "Go Pro"
+  paywall. Enforced both at sign-in and at the proxy.
+- **Graceful fallback** — demo mode (`?demo=1`) bypasses the gate and loads pre-analyzed
+  data instantly, so a client demo can never fail on quota.
 
-## Go-live checklist
+## ✅ Already done (verified live)
+- Deployed to Vercel; `GEMINI_API_KEY` set (`/api/health` → `{"ok":true,"keyConfigured":true}`).
+- Root `/` redirects to signup; unregistered visitors are gated to the signup flow.
+- Live analysis works (SA / US / UK) through the server proxy.
+- Exports: Slides PDF, Intelligence Report, PowerPoint — all on the dark Signal CI.
+- Lead capture emails arrive on signup; PostHog analytics are live.
+- Mobile layout verified; no console errors on the core path.
 
-### 1. Deploy to Vercel
-- vercel.com → **New Project** → import the `HeresJohnJoseph/signal` repo.
-- Vercel auto-detects the `api/` folder as serverless functions. No build config needed.
-- You'll get a URL like `https://signal-xxxx.vercel.app` — this is the beta URL.
+## 🔲 To launch the beta (operational — only you can do these)
 
-### 2. Add the Gemini key as a Vercel env var
-- Vercel project → **Settings → Environment Variables**.
-- Add `GEMINI_API_KEY` = a fresh working `AIzaSy…` key (get one at aistudio.google.com/apikey).
-- **Redeploy** after adding (Deployments → ⋯ → Redeploy) so the variable takes effect.
-- Verify: open `https://<your-vercel-url>/api/health` — it should return
-  `{"ok":true,"keyConfigured":true}`.
+### 1. Add tester emails to the `Allowlist` tab
+- In the tracker Google Sheet, the tab named exactly **`Allowlist`**, column **A**.
+- One approved tester email per row. Add → they're in; remove → they're out. No redeploy.
+- ⚠️ Until this tab has ≥1 email, the gate is effectively **open** — add your testers first.
 
-### 3. Create the Allowlist tab
-- In the tracker Google Sheet, add a tab named exactly **`Allowlist`**.
-- Put one approved tester email per row in **column A**.
-- Add an email → that person is in. Remove it → they're out. No redeploy needed.
-- ⚠️ Until this tab has at least one email, the gate is effectively **open** — create it
-  and add your testers before sharing the link.
+### 2. Redeploy the Apps Script (one time)
+- Tracker sheet → **Extensions → Apps Script** → paste the current [`sheet-sync.gs`](sheet-sync.gs).
+- **Deploy → Manage deployments → Edit → New version → Deploy** (keeps the same URL).
+- This makes signups land in the **`Signups`** tab and enables the **`Pro`** tab writes
+  used by the payment path.
 
-### 4. Push the code
-- `git push` from a terminal where your GitHub login works.
-- Vercel auto-deploys on every push once the project is connected.
+### 3. Share the link
+- Send testers **https://signal-eight-opal.vercel.app** (add `?ref=source` to attribute a
+  channel). They sign in with Google → if allowlisted, straight in.
 
-## Invite testers
-- Send them the **Vercel URL** (not the github.io one — that has no proxy).
-- They click → sign in with Google → if their email is on the Allowlist, they're in;
-  otherwise they see the waitlist screen.
-- Analysis runs through your server-held key. Auto-load Creative works via the shared
-  Apify token already in the `Config` tab.
+## 💳 Optional — turn on paid Pro (to take money)
+See the payment path (commit `acb422f`). Steps: create a Stripe Product + Payment Link
+(success URL → `…/signup.html?pro=success`); add a webhook to `…/api/stripe-webhook`
+(event `checkout.session.completed`) and set `STRIPE_WEBHOOK_SECRET` in Vercel; add a
+`stripe_pro_url` row to the `Config` tab. Not-invited users then see a "Go Pro — Instant
+Access" paywall instead of a dead-end waitlist. Test in Stripe **Test mode** first.
 
 ## Things to watch
-- **Shared quota:** all testers share the one Gemini key (free tier ≈ 1,500 calls/day,
-  10/min). Watch the quota chip in the sidebar. Add per-user limits later if needed.
-- **Security level:** the allowlist trusts the signed-in Google email rather than fully
-  verifying the token — fine for an invited beta; harden before paid launch.
-- **Rotating the key:** if the key ever gets flagged, just change `GEMINI_API_KEY` in
-  Vercel and redeploy — no code change, no front-end edit.
+- **Shared quota:** all testers share one Gemini key (free tier ≈ 1,500 calls/day, 10/min).
+  Watch the quota chip in the sidebar. **Move to a paid Gemini plan before real volume** —
+  a growing paid base will exhaust the shared free cap.
+- **Access trust:** the gate trusts the signed-in Google email rather than fully verifying
+  the token — fine for an invited beta; harden before scaling paid.
+- **Rotating the key:** change `GEMINI_API_KEY` in Vercel and redeploy — no code change.
 
-## Quick verification (after deploy)
+## Quick verification (after any deploy)
 ```
-# health — should show keyConfigured:true
-curl https://<your-vercel-url>/api/health
+# health — keyConfigured:true
+curl https://signal-eight-opal.vercel.app/api/health
 
-# a non-allowlisted call should be refused (403 not_allowed)
-curl -X POST https://<your-vercel-url>/api/analyze \
+# a non-allowlisted analysis call is refused (403 not_allowed) — proves the gate works
+curl -X POST https://signal-eight-opal.vercel.app/api/analyze \
   -H "Content-Type: application/json" \
-  -d '{"prompt":"test","email":"stranger@example.com"}'
+  -d '{"params":{"name":"Test","category":"qsr","market":"us","month":3,"year":2026},"email":"stranger@example.com"}'
 ```
