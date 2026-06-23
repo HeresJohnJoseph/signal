@@ -260,9 +260,9 @@ function App() {
   };
 
   const analyzedCount = cards.filter((c) => c.analyzed).length;
-  const canReport = canExport && analyzedCount > 0;
   const allAnalyzing = cards.some((c) => c.analyzing);
   const canExport = runState === "ready" && hasCards;
+  const canReport = canExport && analyzedCount > 0;
 
   return (
     <div className="app">
