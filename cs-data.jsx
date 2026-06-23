@@ -1492,39 +1492,48 @@ async function generatePDF(state) {
   const PW = 1380, PH = 781;
   const doc = new jsPDF({ unit: "pt", format: [PW, PH], orientation: "landscape" });
 
-  const field = [169, 203, 231], navy = [26, 58, 92], navy2 = [44, 77, 114];
-  const coral = [232, 156, 130], muted = [124, 149, 174], track = [220, 231, 242], white = [255, 255, 255];
+  /* ── Signal dark CI palette (mirrors cs-styles.css :root + the PPT deck) ── */
+  const bg     = [12, 15, 22];    // --bg        #0C0F16
+  const card   = [28, 33, 48];    // --card      #1C2130
+  const card2  = [35, 42, 61];    // --card-2    #232A3D
+  const slot   = [33, 38, 57];    // --surface-3 #212639
+  const accent = [255, 85, 0];    // --accent    #FF5500
+  const track  = [33, 38, 57];    // bar track on dark
+  const text1  = [238, 241, 248]; // --text-1    #EEF1F8
+  const text2  = [136, 146, 164]; // --text-2    #8892A4
+  const text3  = [76, 86, 105];   // --text-3    #4C5669
+  const border = [42, 48, 66];
   const brandRGB = hexToRgb(state.brandColor);
   const PAD = 42;
 
-  state.cards.forEach((card, idx) => {
+  state.cards.forEach((card_, idx) => {
     if (idx > 0) doc.addPage([PW, PH], "landscape");
-    doc.setFillColor(...field); doc.rect(0, 0, PW, PH, "F");
+    doc.setFillColor(...bg); doc.rect(0, 0, PW, PH, "F");
 
     // eyebrow
-    doc.setFont("courier", "bold"); doc.setFontSize(11); doc.setTextColor(111, 147, 184);
+    doc.setFont("courier", "bold"); doc.setFontSize(11); doc.setTextColor(...text2);
     doc.text(`COMPETITOR SNAPSHOT  ·  ${String(idx + 1).padStart(2, "0")} / ${String(state.cards.length).padStart(2, "0")}`, PAD, 50);
     doc.text("ACTIVE ON", PW - PAD, 50, { align: "right" });
 
-    // logo circle
-    doc.setFillColor(234, 242, 250); doc.circle(PAD + 44, 112, 40, "F");
-    doc.setDrawColor(94, 130, 171); doc.setLineWidth(1.2); doc.circle(PAD + 44, 112, 40, "S");
-    doc.setFont("courier", "normal"); doc.setFontSize(8); doc.setTextColor(...muted);
+    // logo circle — brand-coloured ring on a dark disc
+    doc.setFillColor(...card2); doc.circle(PAD + 44, 112, 40, "F");
+    doc.setDrawColor(...brandRGB); doc.setLineWidth(1.6); doc.circle(PAD + 44, 112, 40, "S");
+    doc.setFont("courier", "normal"); doc.setFontSize(8); doc.setTextColor(...text2);
     doc.text("LOGO", PAD + 44, 114, { align: "center" });
 
     // name + sub
-    doc.setFont("times", "bold"); doc.setFontSize(40); doc.setTextColor(...navy);
-    doc.text(card.name, PAD + 104, 122);
-    doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(93, 125, 160);
+    doc.setFont("times", "bold"); doc.setFontSize(40); doc.setTextColor(...text1);
+    doc.text(card_.name, PAD + 104, 122);
+    doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(...text2);
     doc.text("SOCIAL PRESENCE & CREATIVE", PAD + 106, 144);
 
     // active-on chips
     let ax = PW - PAD - 36;
-    [...card.snapshot].reverse().forEach((s) => {
+    [...card_.snapshot].reverse().forEach((s) => {
       const active = isActive(s.role);
-      doc.setFillColor(...(active ? platBrand(s.platform) : [180, 198, 217]));
+      doc.setFillColor(...(active ? platBrand(s.platform) : [50, 57, 77]));
       roundRect(doc, ax, 70, 36, 36, 8, "F");
-      doc.setFont("helvetica", "bold"); doc.setFontSize(15); doc.setTextColor(255, 255, 255);
+      doc.setFont("helvetica", "bold"); doc.setFontSize(15); doc.setTextColor(...(active ? [255, 255, 255] : text3));
       doc.text(platGlyph(s.platform), ax + 18, 93, { align: "center" });
       ax -= 47;
     });
@@ -1533,61 +1542,60 @@ async function generatePDF(state) {
 
     // ---- SOCIAL SNAPSHOT card ----
     const snapH = 250;
-    card_bg(doc, colL, bodyTop, colLW, snapH, white);
-    cardHead(doc, colL + 24, bodyTop + 34, "SOCIAL SNAPSHOT", coral, navy);
+    card_bg(doc, colL, bodyTop, colLW, snapH, card);
+    cardHead(doc, colL + 24, bodyTop + 34, "SOCIAL SNAPSHOT", accent, text1);
     // table header
     const tx = colL + 24, tw = colLW - 48; let ty = bodyTop + 56;
-    doc.setFillColor(...navy); roundRect(doc, tx, ty, tw, 30, 6, "F");
-    doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(207, 224, 240);
+    doc.setFillColor(...card2); roundRect(doc, tx, ty, tw, 30, 6, "F");
+    doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(...text2);
     doc.text("PLATFORM", tx + 14, ty + 19);
     doc.text("ROLE", tx + tw * 0.42, ty + 19);
     doc.text("COMMENT", tx + tw * 0.62, ty + 19);
     ty += 30;
-    card.snapshot.forEach((s) => {
+    card_.snapshot.forEach((s) => {
       const ry = ty + 30;
       doc.setFillColor(...platBrand(s.platform)); roundRect(doc, tx + 4, ry - 13, 20, 20, 5, "F");
       doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.setTextColor(255, 255, 255);
       doc.text(platGlyph(s.platform), tx + 14, ry + 1, { align: "center" });
-      doc.setFontSize(12); doc.setTextColor(...navy);
+      doc.setFontSize(12); doc.setTextColor(...text1);
       doc.text(s.platform, tx + 32, ry + 1);
       // role
       const rc = roleClass(s.role);
-      const rdot = rc === "primary" ? navy : (rc === "light" ? [156, 177, 199] : [203, 216, 229]);
+      const rdot = rc === "primary" ? accent : (rc === "light" ? [120, 130, 150] : text3);
       doc.setFillColor(...rdot); doc.circle(tx + tw * 0.42 + 3, ry - 3, 3.4, "F");
-      doc.setFont("helvetica", "normal"); doc.setFontSize(11); doc.setTextColor(...(rc === "inactive" ? muted : navy2));
+      doc.setFont("helvetica", "normal"); doc.setFontSize(11); doc.setTextColor(...(rc === "inactive" ? text3 : text1));
       doc.text(s.role || "—", tx + tw * 0.42 + 13, ry + 1);
       // comment
-      doc.setTextColor(...muted); doc.setFontSize(11);
+      doc.setTextColor(...text2); doc.setFontSize(11);
       doc.text(s.comment || "—", tx + tw * 0.62, ry + 1);
-      doc.setDrawColor(234, 240, 246); doc.setLineWidth(1); doc.line(tx, ty + 44, tx + tw, ty + 44);
+      doc.setDrawColor(...border); doc.setLineWidth(1); doc.line(tx, ty + 44, tx + tw, ty + 44);
       ty += 44;
     });
 
     // ---- KEY CONTENT THEMES card ----
     const thTop = bodyTop + snapH + 24, thH = PH - thTop - 70;
-    card_bg(doc, colL, thTop, colLW, thH, white);
-    cardHead(doc, colL + 24, thTop + 34, "KEY CONTENT THEMES", coral, navy);
+    card_bg(doc, colL, thTop, colLW, thH, card);
+    cardHead(doc, colL + 24, thTop + 34, "KEY CONTENT THEMES", accent, text1);
     let by = thTop + 64; const barX = colL + 130, barW = colLW - 130 - 28;
-    const maxV = Math.max(1, ...card.themes.map((t) => t.value));
-    card.themes.forEach((t) => {
-      doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.setTextColor(...navy2);
+    card_.themes.forEach((t) => {
+      doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.setTextColor(...text2);
       doc.text(t.label.toUpperCase(), barX - 12, by + 4, { align: "right" });
       doc.setFillColor(...track); roundRect(doc, barX, by - 5, barW, 11, 5.5, "F");
       const w = Math.max(6, barW * (t.value / 100));
       const top = t.label === "Promotions";
-      doc.setFillColor(...(top ? coral : navy));
+      doc.setFillColor(...(top ? accent : [110, 120, 145]));
       roundRect(doc, barX, by - 5, w, 11, 5.5, "F");
-      by += (thH - 76) / card.themes.length;
+      by += (thH - 76) / card_.themes.length;
     });
 
     // ---- SOCIAL CREATIVE card ----
     const crH = PH - bodyTop - 70;
-    card_bg(doc, colR, bodyTop, colRW, crH, white);
-    cardHead(doc, colR + 24, bodyTop + 34, "SOCIAL CREATIVE", coral, navy);
-    doc.setFillColor(234, 242, 250); doc.circle(colR + 36, bodyTop + 62, 14, "F");
-    doc.setFont("helvetica", "bold"); doc.setFontSize(13); doc.setTextColor(...navy);
-    doc.text(card.handle, colR + 60, bodyTop + 60);
-    doc.setFont("helvetica", "normal"); doc.setFontSize(10.5); doc.setTextColor(...muted);
+    card_bg(doc, colR, bodyTop, colRW, crH, card);
+    cardHead(doc, colR + 24, bodyTop + 34, "SOCIAL CREATIVE", accent, text1);
+    doc.setFillColor(...card2); doc.circle(colR + 36, bodyTop + 62, 14, "F");
+    doc.setFont("helvetica", "bold"); doc.setFontSize(13); doc.setTextColor(...text1);
+    doc.text(card_.handle, colR + 60, bodyTop + 60);
+    doc.setFont("helvetica", "normal"); doc.setFontSize(10.5); doc.setTextColor(...text2);
     doc.text("Drop creative from their feed into the slots below", colR + 60, bodyTop + 74);
     // 3x2 grid
     const gx = colR + 24, gy = bodyTop + 92, gw = colRW - 48, gh = crH - 92 - 22;
@@ -1595,17 +1603,17 @@ async function generatePDF(state) {
     const cw = (gw - gap * (cols - 1)) / cols, ch = (gh - gap * (rows - 1)) / rows;
     for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
       const x = gx + c * (cw + gap), yy = gy + r * (ch + gap);
-      doc.setFillColor(195, 216, 236); roundRect(doc, x, yy, cw, ch, 12, "F");
-      doc.setDrawColor(94, 130, 171); doc.setLineWidth(1.4);
+      doc.setFillColor(...slot); roundRect(doc, x, yy, cw, ch, 12, "F");
+      doc.setDrawColor(...border); doc.setLineWidth(1.4);
       dashedRoundRect(doc, x, yy, cw, ch, 12);
-      doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(90, 118, 150);
+      doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(...text3);
       doc.text("Post", x + cw / 2, yy + ch / 2 + 4, { align: "center" });
     }
 
     // footer
-    doc.setFont("helvetica", "bold"); doc.setFontSize(12); doc.setTextColor(93, 125, 160);
+    doc.setFont("helvetica", "bold"); doc.setFontSize(12); doc.setTextColor(...text2);
     doc.text("J O H N   J O S E P H", PW / 2, PH - 34, { align: "center" });
-    doc.setFontSize(10); doc.setTextColor(...hexToRgb("#DE8568"));
+    doc.setFontSize(10); doc.setTextColor(...accent);
     doc.text(`${state.brandLabel.toUpperCase()} BRAND`, PW - PAD, PH - 42, { align: "right" });
     doc.text(`WINDOW ${state.year}`, PW - PAD, PH - 30, { align: "right" });
   });
@@ -1616,23 +1624,32 @@ async function generatePDF(state) {
 }
 
 /* pdf helpers */
-function card_bg(doc, x, y, w, h, rgb) { doc.setFillColor(...rgb); roundRect(doc, x, y, w, h, 16, "F"); }
-function cardHead(doc, x, y, label, coral, navy) {
-  doc.setFillColor(...coral); doc.circle(x + 4, y - 4, 4, "F");
-  doc.setFont("helvetica", "bold"); doc.setFontSize(12.5); doc.setTextColor(...navy);
+function card_bg(doc, x, y, w, h, rgb) {
+  doc.setFillColor(...rgb); roundRect(doc, x, y, w, h, 16, "F");
+  doc.setDrawColor(42, 48, 66); doc.setLineWidth(1); roundRect(doc, x, y, w, h, 16, "S");
+}
+function cardHead(doc, x, y, label, accent, text1) {
+  doc.setFillColor(...accent); doc.circle(x + 4, y - 4, 4, "F");
+  doc.setFont("helvetica", "bold"); doc.setFontSize(12.5); doc.setTextColor(...text1);
   doc.text(label, x + 16, y);
 }
 function platBrand(p) {
   const v = p.toLowerCase();
-  if (v === "facebook") return [24, 119, 242];
-  if (v === "instagram") return [43, 58, 83];
-  return [21, 23, 26]; // X
+  if (v === "facebook")  return [24, 119, 242];  // FB blue
+  if (v === "instagram") return [225, 48, 108];  // IG magenta — pops on dark
+  if (v === "x")         return [74, 82, 102];   // slate (X black is invisible on dark)
+  if (v === "tiktok")    return [238, 29, 82];   // TikTok red
+  if (v === "website")   return [90, 100, 128];  // neutral slate
+  return [74, 82, 102];
 }
 function platGlyph(p) {
   const v = p.toLowerCase();
-  if (v === "facebook") return "f";
+  if (v === "facebook")  return "f";
   if (v === "instagram") return "@";
-  return "X";
+  if (v === "x")         return "X";
+  if (v === "tiktok")    return "t";
+  if (v === "website")   return "w";
+  return "•";
 }
 function hexToRgb(hex) { const h = hex.replace("#", ""); return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)]; }
 function roundRect(doc, x, y, w, h, r, style) { if (doc.roundedRect) doc.roundedRect(x, y, w, h, r, r, style); else doc.rect(x, y, w, h, style); }
@@ -1649,10 +1666,22 @@ async function generateReport(state) {
   const PW = 595, PH = 842;
   const doc = new jsPDF({ unit: "pt", format: "a4", orientation: "portrait" });
 
-  const navy  = [26, 58, 92],  navy2 = [44, 77, 114];
-  const coral = [232, 156, 130], fieldBlue = [169, 203, 231];
-  const white = [255, 255, 255], muted = [124, 149, 174];
-  const track = [220, 231, 242], green = [82, 182, 154];
+  /* ── Signal dark CI palette (mirrors cs-styles.css :root + the deck) ── */
+  const bg      = [12, 15, 22];     // --bg        #0C0F16
+  const card    = [28, 33, 48];     // --card      #1C2130
+  const card2   = [35, 42, 61];     // --card-2    #232A3D  (header strips / insets)
+  const cardAlt = [24, 29, 42];     // zebra alt row
+  const accent  = [255, 85, 0];     // --accent    #FF5500
+  const text1   = [238, 241, 248];  // --text-1    #EEF1F8
+  const text2   = [136, 146, 164];  // --text-2    #8892A4
+  const text3   = [76, 86, 105];    // --text-3    #4C5669
+  const soft    = [206, 213, 228];  // readable body text on dark cards
+  const track   = [33, 38, 57];     // bar track
+  const border  = [42, 48, 66];
+  const neutral = [110, 120, 145];  // neutral bar/dot
+  const green   = [34, 197, 94];    // --green
+  const yellow  = [245, 166, 35];   // --yellow
+  const red     = [239, 68, 68];    // --red
   const PAD = 40, CW = 515;
   const period = `${MONTHS[state.month]} ${state.year}`;
 
@@ -1661,13 +1690,13 @@ async function generateReport(state) {
   const avgScore = () => { const sc = state.cards.filter(c => c.effectivenessScore !== null); return sc.length ? (sc.reduce((a,c)=>a+c.effectivenessScore,0)/sc.length).toFixed(1) : "—"; };
 
   /* ── PAGE 1: COVER ── */
-  doc.setFillColor(...navy); doc.rect(0, 0, PW, PH, "F");
-  doc.setFillColor(...coral); doc.rect(PAD, 170, 90, 4, "F");
-  doc.setFont("helvetica","bold"); doc.setFontSize(9); doc.setTextColor(...coral);
+  doc.setFillColor(...bg); doc.rect(0, 0, PW, PH, "F");
+  doc.setFillColor(...accent); doc.rect(PAD, 170, 90, 4, "F");
+  doc.setFont("helvetica","bold"); doc.setFontSize(9); doc.setTextColor(...accent);
   doc.text("SOCIAL INTELLIGENCE REPORT", PAD, 152);
-  doc.setFont("times","bold"); doc.setFontSize(54); doc.setTextColor(...white);
+  doc.setFont("times","bold"); doc.setFontSize(54); doc.setTextColor(...text1);
   doc.text(state.brandLabel, PAD, 240);
-  doc.setFont("helvetica","normal"); doc.setFontSize(20); doc.setTextColor(169,200,230);
+  doc.setFont("helvetica","normal"); doc.setFontSize(20); doc.setTextColor(...text2);
   doc.text("Competitive Intelligence · " + period, PAD, 274);
 
   /* stat trio */
@@ -1677,62 +1706,64 @@ async function generateReport(state) {
     { v: avgScore(),                                       l: "AVG SCORE" },
   ].forEach((s, i) => {
     const sx = PAD + i * 172;
-    doc.setFillColor(40, 80, 120); rr(sx, 310, 160, 76, 10, "F");
-    doc.setFont("times","bold"); doc.setFontSize(36); doc.setTextColor(...white);
+    doc.setFillColor(...card); rr(sx, 310, 160, 76, 10, "F");
+    doc.setDrawColor(...border); doc.setLineWidth(1); rr(sx, 310, 160, 76, 10, "S");
+    doc.setFont("times","bold"); doc.setFontSize(36); doc.setTextColor(...text1);
     doc.text(String(s.v), sx + 80, 352, { align: "center" });
-    doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...muted);
+    doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...text2);
     doc.text(s.l, sx + 80, 370, { align: "center" });
   });
 
   /* signal chip */
   if (state.signalKeyword) {
     const matches = state.cards.filter(c => c.signalMatch).map(c => c.name);
-    doc.setFillColor(...coral); rr(PAD, 408, CW, 52, 10, "F");
-    doc.setFont("helvetica","bold"); doc.setFontSize(10); doc.setTextColor(...navy);
+    doc.setFillColor(...accent); rr(PAD, 408, CW, 52, 10, "F");
+    doc.setFont("helvetica","bold"); doc.setFontSize(10); doc.setTextColor(...bg);
     doc.text(`◉  SIGNAL: "${state.signalKeyword.toUpperCase()}"`, PAD + 16, 428);
     doc.setFontSize(9.5);
     doc.text(matches.length ? `Detected in: ${matches.join(", ")}` : "No competitor matches detected this period", PAD + 16, 447);
   }
 
-  doc.setFont("helvetica","normal"); doc.setFontSize(10); doc.setTextColor(80,110,150);
+  doc.setFont("helvetica","normal"); doc.setFontSize(10); doc.setTextColor(...text2);
   doc.text("Prepared by John Joseph  ·  Strategy Intelligence  ·  VML", PAD, PH - 54);
-  doc.setFontSize(9); doc.setTextColor(...muted);
+  doc.setFontSize(9); doc.setTextColor(...text3);
   doc.text("CONFIDENTIAL — FOR INTERNAL STRATEGIC USE ONLY", PAD, PH - 37);
 
   /* ── PAGE 2: CATEGORY OVERVIEW ── */
   doc.addPage();
-  doc.setFillColor(...navy); doc.rect(0, 0, PW, 76, "F");
-  doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...coral);
+  doc.setFillColor(...bg); doc.rect(0, 0, PW, PH, "F");
+  doc.setFillColor(...card2); doc.rect(0, 0, PW, 76, "F");
+  doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...accent);
   doc.text("CATEGORY OVERVIEW", PAD, 28);
-  doc.setFont("times","bold"); doc.setFontSize(22); doc.setTextColor(...white);
+  doc.setFont("times","bold"); doc.setFontSize(22); doc.setTextColor(...text1);
   doc.text(`${state.brandLabel} · Competitor Landscape · ${period}`, PAD, 56);
 
   /* table */
   const cols = [158, 54, 62, 80, 72, 56];
   const hdrs = ["COMPETITOR","POSTS","FREQ/DAY","TOP THEME","SENTIMENT","SCORE"];
   let ty = 90;
-  doc.setFillColor(...navy); doc.rect(PAD, ty, CW, 26, "F");
+  doc.setFillColor(...card2); doc.rect(PAD, ty, CW, 26, "F");
   let cx2 = PAD + 8;
   hdrs.forEach((h, i) => {
-    doc.setFont("helvetica","bold"); doc.setFontSize(7.5); doc.setTextColor(207,224,240);
+    doc.setFont("helvetica","bold"); doc.setFontSize(7.5); doc.setTextColor(...text2);
     doc.text(h, cx2, ty + 17); cx2 += cols[i];
   });
   ty += 26;
-  state.cards.forEach((card, i) => {
-    doc.setFillColor(...(i%2===0 ? [244,249,255] : [255,255,255])); doc.rect(PAD, ty, CW, 28, "F");
-    const tot = Object.values(card.postFrequency || {}).reduce((a, b) => a + (b || 0), 0);
+  state.cards.forEach((card_, i) => {
+    doc.setFillColor(...(i%2===0 ? card : cardAlt)); doc.rect(PAD, ty, CW, 28, "F");
+    const tot = Object.values(card_.postFrequency || {}).reduce((a, b) => a + (b || 0), 0);
     const freq = tot > 0 ? (tot/30).toFixed(1) : "—";
-    const topTh = [...card.themes].sort((a,b)=>b.value-a.value)[0]?.label || "—";
-    const sent = card.sentiment?.positive > card.sentiment?.negative ? "Positive" : card.sentiment?.negative > 50 ? "Negative" : "Neutral";
-    const sc = card.effectivenessScore;
-    const row = [card.name, tot||"—", freq, topTh, sent, sc ? sc.toFixed(1) : "—"];
+    const topTh = [...card_.themes].sort((a,b)=>b.value-a.value)[0]?.label || "—";
+    const sent = card_.sentiment?.positive > card_.sentiment?.negative ? "Positive" : card_.sentiment?.negative > 50 ? "Negative" : "Neutral";
+    const sc = card_.effectivenessScore;
+    const row = [card_.name, tot||"—", freq, topTh, sent, sc ? sc.toFixed(1) : "—"];
     cx2 = PAD + 8;
     row.forEach((v, j) => {
       doc.setFont("helvetica", j===0?"bold":"normal"); doc.setFontSize(9.5);
-      doc.setTextColor(...(j===5 && sc>=8 ? coral : navy2));
+      doc.setTextColor(...(j===5 && sc>=8 ? accent : (j===0 ? text1 : soft)));
       doc.text(String(v), cx2, ty + 18); cx2 += cols[j];
     });
-    doc.setDrawColor(...track); doc.setLineWidth(0.4); doc.line(PAD, ty+28, PAD+CW, ty+28);
+    doc.setDrawColor(...border); doc.setLineWidth(0.4); doc.line(PAD, ty+28, PAD+CW, ty+28);
     ty += 28;
   });
 
@@ -1740,40 +1771,42 @@ async function generateReport(state) {
   ty += 16;
   const combinedInsight = state.cards.filter(c=>c.insight).map(c=>stripHi(c.insight)).join(" ").slice(0, 420);
   if (combinedInsight) {
-    doc.setFillColor(240,247,255); rr(PAD, ty, CW, 90, 8, "F");
-    doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...coral);
+    doc.setFillColor(...card); rr(PAD, ty, CW, 90, 8, "F");
+    doc.setDrawColor(...border); doc.setLineWidth(1); rr(PAD, ty, CW, 90, 8, "S");
+    doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...accent);
     doc.text("CATEGORY INTELLIGENCE SUMMARY", PAD+14, ty+17);
-    doc.setFont("helvetica","normal"); doc.setFontSize(9.5); doc.setTextColor(...navy2);
+    doc.setFont("helvetica","normal"); doc.setFontSize(9.5); doc.setTextColor(...soft);
     const wl = doc.splitTextToSize(combinedInsight, CW-28);
     doc.text(wl.slice(0,5), PAD+14, ty+32);
   }
 
   /* ── PAGES 3-N: PER COMPETITOR ── */
-  state.cards.forEach((card, idx) => {
+  state.cards.forEach((card_, idx) => {
     doc.addPage();
+    doc.setFillColor(...bg); doc.rect(0, 0, PW, PH, "F");
 
     /* header */
-    doc.setFillColor(...navy); doc.rect(0, 0, PW, 76, "F");
-    doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...coral);
+    doc.setFillColor(...card2); doc.rect(0, 0, PW, 76, "F");
+    doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...accent);
     doc.text(`COMPETITOR  ${String(idx+1).padStart(2,"0")} / ${String(state.cards.length).padStart(2,"0")}`, PAD, 26);
-    doc.setFont("times","bold"); doc.setFontSize(26); doc.setTextColor(...white);
-    doc.text(card.name, PAD, 56);
-    doc.setFont("helvetica","normal"); doc.setFontSize(11); doc.setTextColor(140,175,210);
-    doc.text(card.handle, PAD + doc.getTextWidth(card.name) + 12, 56);
+    doc.setFont("times","bold"); doc.setFontSize(26); doc.setTextColor(...text1);
+    doc.text(card_.name, PAD, 56);
+    doc.setFont("helvetica","normal"); doc.setFontSize(11); doc.setTextColor(...text2);
+    doc.text(card_.handle, PAD + doc.getTextWidth(card_.name) + 12, 56);
 
     /* score badge */
-    if (card.effectivenessScore !== null) {
-      doc.setFillColor(...coral); rr(PW-PAD-68, 14, 68, 48, 8, "F");
-      doc.setFont("times","bold"); doc.setFontSize(24); doc.setTextColor(...white);
-      doc.text(card.effectivenessScore.toFixed(1), PW-PAD-34, 42, { align:"center" });
-      doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(255,220,210);
+    if (card_.effectivenessScore !== null) {
+      doc.setFillColor(...accent); rr(PW-PAD-68, 14, 68, 48, 8, "F");
+      doc.setFont("times","bold"); doc.setFontSize(24); doc.setTextColor(255,255,255);
+      doc.text(card_.effectivenessScore.toFixed(1), PW-PAD-34, 42, { align:"center" });
+      doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(255,224,208);
       doc.text("/10", PW-PAD-34, 56, { align:"center" });
     }
 
     /* signal badge */
-    if (card.signalMatch && state.signalKeyword) {
-      doc.setFillColor(255,210,80); rr(PW-PAD-155, 18, 78, 38, 8, "F");
-      doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...navy);
+    if (card_.signalMatch && state.signalKeyword) {
+      doc.setFillColor(...yellow); rr(PW-PAD-155, 18, 78, 38, 8, "F");
+      doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...bg);
       doc.text("◉ SIGNAL HIT", PW-PAD-116, 33, { align:"center" });
       doc.setFontSize(7);
       doc.text(`"${state.signalKeyword}"`, PW-PAD-116, 47, { align:"center" });
@@ -1788,35 +1821,36 @@ async function generateReport(state) {
       const lines = doc.splitTextToSize(body, w-24);
       const h = Math.max(50, lines.length * 13 + 30);
       doc.setFillColor(...bgColor); rr(x, y, w, h, 8, "F");
-      doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...coral);
+      doc.setDrawColor(...border); doc.setLineWidth(1); rr(x, y, w, h, 8, "S");
+      doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...accent);
       doc.text(title, x+12, y+15);
       doc.setFont("helvetica","normal"); doc.setFontSize(9.5); doc.setTextColor(...textColor);
       doc.text(lines, x+12, y+28);
       return y + h + 10;
     };
 
-    if (card.executiveSummary) y1 = textBlock("EXECUTIVE SUMMARY", stripHi(card.executiveSummary), [241,247,255], navy2, PAD, y1, C1W);
-    if (card.insight) y1 = textBlock("STRATEGIC INSIGHT", stripHi(card.insight), navy, [200,220,240], PAD, y1, C1W);
+    if (card_.executiveSummary) y1 = textBlock("EXECUTIVE SUMMARY", stripHi(card_.executiveSummary), card, soft, PAD, y1, C1W);
+    if (card_.insight) y1 = textBlock("STRATEGIC INSIGHT", stripHi(card_.insight), card2, text1, PAD, y1, C1W);
 
     /* campaigns */
-    if (card.keyCampaigns?.length) {
+    if (card_.keyCampaigns?.length) {
       let campH = 22;
-      card.keyCampaigns.slice(0,3).forEach(c => {
+      card_.keyCampaigns.slice(0,3).forEach(c => {
         campH += 16 + doc.splitTextToSize(c.description||"", C1W-36).length * 11 + 6;
       });
-      doc.setFillColor(...white); doc.setDrawColor(...track); doc.setLineWidth(0.8);
-      rr(PAD, y1, C1W, campH+8, 8, "F");
-      doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...coral);
+      doc.setFillColor(...card); doc.setDrawColor(...border); doc.setLineWidth(1);
+      rr(PAD, y1, C1W, campH+8, 8, "FD");
+      doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...accent);
       doc.text("KEY CAMPAIGNS", PAD+12, y1+15);
       let cy = y1+26;
-      card.keyCampaigns.slice(0,3).forEach(c => {
-        doc.setFillColor(...coral); doc.circle(PAD+17, cy+2, 3, "F");
-        doc.setFont("helvetica","bold"); doc.setFontSize(9.5); doc.setTextColor(...navy);
+      card_.keyCampaigns.slice(0,3).forEach(c => {
+        doc.setFillColor(...accent); doc.circle(PAD+17, cy+2, 3, "F");
+        doc.setFont("helvetica","bold"); doc.setFontSize(9.5); doc.setTextColor(...text1);
         doc.text(c.title||"", PAD+28, cy+5);
         cy += 15;
         if (c.description) {
           const dl = doc.splitTextToSize(c.description, C1W-36);
-          doc.setFont("helvetica","normal"); doc.setFontSize(9); doc.setTextColor(...muted);
+          doc.setFont("helvetica","normal"); doc.setFontSize(9); doc.setTextColor(...text2);
           doc.text(dl, PAD+28, cy); cy += dl.length*11 + 6;
         }
       });
@@ -1825,21 +1859,22 @@ async function generateReport(state) {
 
     /* whitespace + rec */
     const remaining1 = PH - 44 - y1;
-    if (remaining1 > 70 && (card.whitespace || card.recommendations)) {
-      doc.setFillColor(245,250,255); rr(PAD, y1, C1W, remaining1, 8, "F");
+    if (remaining1 > 70 && (card_.whitespace || card_.recommendations)) {
+      doc.setFillColor(...card); rr(PAD, y1, C1W, remaining1, 8, "F");
+      doc.setDrawColor(...border); doc.setLineWidth(1); rr(PAD, y1, C1W, remaining1, 8, "S");
       let wy = y1+14;
-      if (card.whitespace) {
-        doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...coral);
+      if (card_.whitespace) {
+        doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...accent);
         doc.text("WHITESPACE OPPORTUNITY", PAD+12, wy); wy += 14;
-        const wl = doc.splitTextToSize(card.whitespace, C1W-24);
-        doc.setFont("helvetica","normal"); doc.setFontSize(9.5); doc.setTextColor(...navy2);
+        const wl = doc.splitTextToSize(card_.whitespace, C1W-24);
+        doc.setFont("helvetica","normal"); doc.setFontSize(9.5); doc.setTextColor(...soft);
         doc.text(wl, PAD+12, wy); wy += wl.length*13+10;
       }
-      if (card.recommendations) {
-        doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...coral);
+      if (card_.recommendations) {
+        doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...accent);
         doc.text("RECOMMENDATION", PAD+12, wy); wy += 14;
-        const rl = doc.splitTextToSize(card.recommendations, C1W-24);
-        doc.setFont("helvetica","normal"); doc.setFontSize(9.5); doc.setTextColor(...navy2);
+        const rl = doc.splitTextToSize(card_.recommendations, C1W-24);
+        doc.setFont("helvetica","normal"); doc.setFontSize(9.5); doc.setTextColor(...soft);
         doc.text(rl, PAD+12, wy);
       }
     }
@@ -1847,26 +1882,27 @@ async function generateReport(state) {
     /* ---- RIGHT COLUMN ---- */
 
     /* social snapshot */
-    const snapH = 32 + card.snapshot.length * 30 + 20;
-    doc.setFillColor(...white); rr(C2X, y2, C2W, snapH, 8, "F");
-    doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...coral);
+    const snapH = 32 + card_.snapshot.length * 30 + 20;
+    doc.setFillColor(...card); rr(C2X, y2, C2W, snapH, 8, "F");
+    doc.setDrawColor(...border); doc.setLineWidth(1); rr(C2X, y2, C2W, snapH, 8, "S");
+    doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...accent);
     doc.text("SOCIAL SNAPSHOT", C2X+12, y2+15);
-    doc.setFillColor(...navy); rr(C2X+8, y2+21, C2W-16, 20, 4, "F");
-    doc.setFontSize(7); doc.setTextColor(207,224,240);
+    doc.setFillColor(...card2); rr(C2X+8, y2+21, C2W-16, 20, 4, "F");
+    doc.setFontSize(7); doc.setTextColor(...text2);
     doc.text("PLATFORM", C2X+16, y2+34); doc.text("ROLE", C2X+16+72, y2+34);
     let sy = y2+41;
-    card.snapshot.forEach(s => {
+    card_.snapshot.forEach(s => {
       doc.setFillColor(...platBrand(s.platform)); rr(C2X+12, sy+2, 15, 15, 3, "F");
       doc.setFont("helvetica","bold"); doc.setFontSize(7); doc.setTextColor(255,255,255);
       doc.text(platGlyph(s.platform), C2X+19.5, sy+12, { align:"center" });
-      doc.setFontSize(9); doc.setTextColor(...navy);
+      doc.setFontSize(9); doc.setTextColor(...text1);
       doc.text(s.platform, C2X+32, sy+12);
       const rc = roleClass(s.role);
-      const rdot = rc==="primary"?navy:rc==="light"?[156,177,199]:[203,216,229];
+      const rdot = rc==="primary"?accent:rc==="light"?neutral:text3;
       doc.setFillColor(...rdot); doc.circle(C2X+16+72+3, sy+8, 3, "F");
-      doc.setFont("helvetica","normal"); doc.setFontSize(9); doc.setTextColor(...(rc==="inactive"?muted:navy2));
+      doc.setFont("helvetica","normal"); doc.setFontSize(9); doc.setTextColor(...(rc==="inactive"?text3:soft));
       doc.text(s.role||"—", C2X+16+72+10, sy+12);
-      doc.setDrawColor(...track); doc.setLineWidth(0.4); doc.line(C2X+8, sy+20, C2X+C2W-8, sy+20);
+      doc.setDrawColor(...border); doc.setLineWidth(0.4); doc.line(C2X+8, sy+20, C2X+C2W-8, sy+20);
       sy += 20;
     });
     y2 += snapH + 10;
@@ -1874,48 +1910,50 @@ async function generateReport(state) {
     /* sentiment */
     {
       const h = 68;
-      doc.setFillColor(...white); rr(C2X, y2, C2W, h, 8, "F");
-      doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...coral);
+      doc.setFillColor(...card); rr(C2X, y2, C2W, h, 8, "F");
+      doc.setDrawColor(...border); doc.setLineWidth(1); rr(C2X, y2, C2W, h, 8, "S");
+      doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...accent);
       doc.text("SENTIMENT INDEX", C2X+12, y2+15);
       const bx = C2X+12, bw = C2W-24, by3 = y2+22, bh = 11;
       doc.setFillColor(...track); rr(bx, by3, bw, bh, 5, "F");
       let sx3 = bx;
-      if (card.sentiment?.positive>0) { const w=bw*card.sentiment.positive/100; doc.setFillColor(...green); doc.rect(sx3,by3,w,bh,"F"); sx3+=w; }
-      if (card.sentiment?.neutral>0)  { const w=bw*card.sentiment.neutral/100;  doc.setFillColor(...fieldBlue); doc.rect(sx3,by3,w,bh,"F"); sx3+=w; }
-      if (card.sentiment?.negative>0) { const w=bw*card.sentiment.negative/100; doc.setFillColor(...coral); doc.rect(sx3,by3,w,bh,"F"); }
+      if (card_.sentiment?.positive>0) { const w=bw*card_.sentiment.positive/100; doc.setFillColor(...green); doc.rect(sx3,by3,w,bh,"F"); sx3+=w; }
+      if (card_.sentiment?.neutral>0)  { const w=bw*card_.sentiment.neutral/100;  doc.setFillColor(...neutral); doc.rect(sx3,by3,w,bh,"F"); sx3+=w; }
+      if (card_.sentiment?.negative>0) { const w=bw*card_.sentiment.negative/100; doc.setFillColor(...red); doc.rect(sx3,by3,w,bh,"F"); }
       let lx = bx;
       [
-        { label:`${card.sentiment?.positive||0}% Pos`, color:green },
-        { label:`${card.sentiment?.neutral||0}% Neu`,  color:fieldBlue },
-        { label:`${card.sentiment?.negative||0}% Neg`, color:coral },
+        { label:`${card_.sentiment?.positive||0}% Pos`, color:green },
+        { label:`${card_.sentiment?.neutral||0}% Neu`,  color:neutral },
+        { label:`${card_.sentiment?.negative||0}% Neg`, color:red },
       ].forEach(item => {
         doc.setFillColor(...item.color); doc.circle(lx+4, y2+46, 3.5, "F");
-        doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...navy2);
+        doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...soft);
         doc.text(item.label, lx+12, y2+49); lx += 72;
       });
       y2 += h + 10;
     }
 
     /* creative scores */
-    if (card.creativeScores) {
+    if (card_.creativeScores) {
       const dims = [
         ["platformNative","Platform Native"],["culturalRelevance","Cultural Relevance"],
         ["visualDistinctiveness","Visual Distinctiveness"],["strategicClarity","Strategic Clarity"],
         ["engagementPotential","Engagement Potential"],
       ];
       const h = 24 + dims.length * 21 + 10;
-      doc.setFillColor(...white); rr(C2X, y2, C2W, h, 8, "F");
-      doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...coral);
+      doc.setFillColor(...card); rr(C2X, y2, C2W, h, 8, "F");
+      doc.setDrawColor(...border); doc.setLineWidth(1); rr(C2X, y2, C2W, h, 8, "S");
+      doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...accent);
       doc.text("CREATIVE EFFECTIVENESS", C2X+12, y2+15);
       let scY = y2+24;
       dims.forEach(([k, lbl]) => {
-        const val = card.creativeScores[k] || 5;
-        doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.setTextColor(...navy2);
+        const val = card_.creativeScores[k] || 5;
+        doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.setTextColor(...soft);
         doc.text(lbl, C2X+12, scY+9);
         const bx2 = C2X+12+102, bw2 = C2W-24-102-28;
         doc.setFillColor(...track); rr(bx2, scY, bw2, 10, 5, "F");
-        doc.setFillColor(...(val>=8?coral:navy)); rr(bx2, scY, Math.max(6, bw2*val/10), 10, 5, "F");
-        doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...navy);
+        doc.setFillColor(...(val>=8?accent:neutral)); rr(bx2, scY, Math.max(6, bw2*val/10), 10, 5, "F");
+        doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...text1);
         doc.text(`${val}`, C2X+C2W-16, scY+9, { align:"right" });
         scY += 21;
       });
@@ -1924,28 +1962,29 @@ async function generateReport(state) {
 
     /* content snapshot */
     const rem2 = PH - 44 - y2;
-    if (card.contentSnapshot && rem2 > 70) {
-      const sn = card.contentSnapshot;
+    if (card_.contentSnapshot && rem2 > 70) {
+      const sn = card_.contentSnapshot;
       const h = Math.min(rem2, 110);
-      doc.setFillColor(241,247,255); rr(C2X, y2, C2W, h, 8, "F");
-      doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...coral);
+      doc.setFillColor(...card); rr(C2X, y2, C2W, h, 8, "F");
+      doc.setDrawColor(...border); doc.setLineWidth(1); rr(C2X, y2, C2W, h, 8, "S");
+      doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...accent);
       doc.text("CONTENT SNAPSHOT", C2X+12, y2+15);
-      doc.setFont("helvetica","normal"); doc.setFontSize(7.5); doc.setTextColor(...muted);
+      doc.setFont("helvetica","normal"); doc.setFontSize(7.5); doc.setTextColor(...text2);
       doc.text(`${sn.date||""} · ${sn.platform||""} · ${sn.format||""}`, C2X+12, y2+27);
       if (sn.caption) {
         const cl = doc.splitTextToSize(`"${sn.caption}"`, C2W-24);
-        doc.setFontSize(9); doc.setTextColor(...navy2);
+        doc.setFontSize(9); doc.setTextColor(...soft);
         doc.text(cl.slice(0,3), C2X+12, y2+40);
       }
       if (sn.engagement) {
-        doc.setFont("helvetica","bold"); doc.setFontSize(8.5); doc.setTextColor(...navy);
+        doc.setFont("helvetica","bold"); doc.setFontSize(8.5); doc.setTextColor(...green);
         doc.text(`↑ ${sn.engagement}`, C2X+12, y2+h-12);
       }
     }
 
     /* footer */
-    doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.setTextColor(...muted);
-    doc.text(card.name + " · " + period, PAD, PH-22);
+    doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.setTextColor(...text3);
+    doc.text(card_.name + " · " + period, PAD, PH-22);
     doc.text(String(idx+3), PW/2, PH-22, { align:"center" });
     doc.text("CONFIDENTIAL", PW-PAD, PH-22, { align:"right" });
   });
@@ -1953,35 +1992,37 @@ async function generateReport(state) {
   /* ── SIGNAL INTELLIGENCE PAGE (if keyword + matches) ── */
   if (state.signalKeyword && state.cards.some(c => c.signalMatch)) {
     doc.addPage();
-    doc.setFillColor(...navy); doc.rect(0,0,PW,76,"F");
-    doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...coral);
+    doc.setFillColor(...bg); doc.rect(0, 0, PW, PH, "F");
+    doc.setFillColor(...card2); doc.rect(0,0,PW,76,"F");
+    doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...accent);
     doc.text("SIGNAL INTELLIGENCE", PAD, 26);
-    doc.setFont("times","bold"); doc.setFontSize(22); doc.setTextColor(...white);
+    doc.setFont("times","bold"); doc.setFontSize(22); doc.setTextColor(...text1);
     doc.text(`Keyword Signal: "${state.signalKeyword}"`, PAD, 56);
 
     let sy2 = 94;
-    state.cards.filter(c=>c.signalMatch).forEach(card => {
-      const sn = card.signalNote||"Signal match detected.";
+    state.cards.filter(c=>c.signalMatch).forEach(card_ => {
+      const sn = card_.signalNote||"Signal match detected.";
       const snl = doc.splitTextToSize(sn, CW-40);
       const h = Math.max(72, snl.length*13+42);
-      doc.setFillColor(255,248,228); rr(PAD, sy2, CW, h, 8, "F");
-      doc.setFillColor(255,200,60); doc.rect(PAD, sy2, 5, h, "F");
-      doc.setFont("helvetica","bold"); doc.setFontSize(12); doc.setTextColor(...navy);
-      doc.text(card.name, PAD+18, sy2+22);
-      if (card.effectivenessScore !== null) {
-        doc.setFontSize(9); doc.setTextColor(...coral);
-        doc.text(`Score ${card.effectivenessScore.toFixed(1)}/10`, PAD+18+doc.getTextWidth(card.name)+10, sy2+22);
+      doc.setFillColor(...card); rr(PAD, sy2, CW, h, 8, "F");
+      doc.setDrawColor(...border); doc.setLineWidth(1); rr(PAD, sy2, CW, h, 8, "S");
+      doc.setFillColor(...yellow); doc.rect(PAD, sy2, 5, h, "F");
+      doc.setFont("helvetica","bold"); doc.setFontSize(12); doc.setTextColor(...text1);
+      doc.text(card_.name, PAD+18, sy2+22);
+      if (card_.effectivenessScore !== null) {
+        doc.setFontSize(9); doc.setTextColor(...accent);
+        doc.text(`Score ${card_.effectivenessScore.toFixed(1)}/10`, PAD+18+doc.getTextWidth(card_.name)+10, sy2+22);
       }
-      doc.setFont("helvetica","normal"); doc.setFontSize(9.5); doc.setTextColor(...navy2);
+      doc.setFont("helvetica","normal"); doc.setFontSize(9.5); doc.setTextColor(...soft);
       doc.text(snl, PAD+18, sy2+38);
       sy2 += h + 12;
     });
 
     const noMatch = state.cards.filter(c=>!c.signalMatch);
     if (noMatch.length && sy2 < PH-80) {
-      doc.setFont("helvetica","bold"); doc.setFontSize(9); doc.setTextColor(...muted);
+      doc.setFont("helvetica","bold"); doc.setFontSize(9); doc.setTextColor(...text2);
       doc.text("NO SIGNAL DETECTED:", PAD, sy2+20);
-      doc.setFont("helvetica","normal"); doc.setTextColor(...navy2);
+      doc.setFont("helvetica","normal"); doc.setTextColor(...soft);
       doc.text(noMatch.map(c=>c.name).join("  ·  "), PAD, sy2+36);
     }
   }
