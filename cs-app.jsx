@@ -47,6 +47,20 @@ function App() {
   const handleSetApifyToken = (t) => { saveApifyToken(t); setApifyToken(t); };
   const refreshQuota = () => setGeminiCalls(getGeminiCallsToday());
 
+  /* Returning from a successful Stripe checkout → mark Pro + welcome. */
+  const [proWelcome, setProWelcome] = useState(false);
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("pro") === "success") {
+      setProStatus(true);
+      if (window.posthog) window.posthog.capture("pro_checkout_success", { email: getUserEmail() });
+      params.delete("pro");
+      const qs = params.toString();
+      window.history.replaceState({}, "", window.location.pathname + (qs ? "?" + qs : ""));
+      setProWelcome(true);
+    }
+  }, []);
+
   const brandLabel = contextLabel(brandSel, marketSel);
   const brandCat = BRANDS[brandSel].cat;
   const ctxColor = colors[brandSel];
@@ -239,6 +253,14 @@ function App() {
 
   return (
     <div className="app">
+      {proWelcome && (
+        <div onClick={() => setProWelcome(false)}
+          style={{ position: "fixed", top: 18, left: "50%", transform: "translateX(-50%)", zIndex: 9999,
+                   background: "var(--accent)", color: "#0C0F16", fontWeight: 700, fontSize: 14,
+                   padding: "12px 22px", borderRadius: 10, boxShadow: "0 8px 30px rgba(0,0,0,.4)", cursor: "pointer" }}>
+          ★ Welcome to Signal Pro — you now have full access. (click to dismiss)
+        </div>
+      )}
       <Preloader cards={cards} runState={runState} />
       <Sidebar
         marketSel={marketSel} setMarket={chooseMarket}

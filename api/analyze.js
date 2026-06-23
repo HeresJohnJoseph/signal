@@ -123,25 +123,26 @@ RULES:
 - Base on real search results; use informed estimates where data is incomplete`;
 }
 
-// Pull approved emails from the sheet's "Allowlist" tab (column A).
+// Pull emails from a sheet tab's column A (lowercased, only rows with "@").
 // Returns null if it can't be read (treated as "no list configured").
-async function fetchAllowlist() {
+async function fetchEmailTab(tab) {
   try {
     const r = await fetch(
-      `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Allowlist`,
+      `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(tab)}`,
       { signal: AbortSignal.timeout(5000) }
     );
     if (!r.ok) return null;
     const txt = await r.text();
-    const emails = txt
+    return txt
       .split(/\r?\n/)
       .map((line) => (line.split(",")[0] || "").replace(/^"|"$/g, "").trim().toLowerCase())
       .filter((e) => e.includes("@"));
-    return emails;
   } catch {
     return null;
   }
 }
+const fetchAllowlist = () => fetchEmailTab("Allowlist");  // free invite-only beta
+const fetchProList  = () => fetchEmailTab("Pro");          // paying customers
 
 export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
@@ -161,11 +162,13 @@ export default async function handler(req, res) {
     (body && body.prompt);
   if (!prompt) return res.status(400).json({ error: "Missing params or prompt." });
 
-  // Allowlist enforcement — only if a list exists and has entries.
-  const allow = await fetchAllowlist();
-  if (allow && allow.length) {
+  // Access gate: paying Pro customers bypass the invite-only beta allowlist.
+  // Enforced only if an allowlist exists and has entries (else "open").
+  const [allow, pro] = await Promise.all([fetchAllowlist(), fetchProList()]);
+  const isPro = !!(pro && email && pro.includes(email));
+  if (!isPro && allow && allow.length) {
     if (!email || !allow.includes(email)) {
-      return res.status(403).json({ error: "not_allowed: This account isn't on the Signal beta list yet." });
+      return res.status(403).json({ error: "not_allowed: This account isn't on the Signal beta list yet. Upgrade to Pro for instant access." });
     }
   }
 

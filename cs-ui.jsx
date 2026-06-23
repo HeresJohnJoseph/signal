@@ -812,6 +812,20 @@ function Sidebar(props) {
           onGenerateReport, reportBusy, canReport,
           onGeneratePPT, pptBusy,
           onShowMethodology, geminiCalls = 0 } = props;
+  /* Signal Pro — badge when paid, "Go Pro" CTA otherwise. */
+  const [isPro, setIsPro] = _useS(getProStatus());
+  const [stripeUrl, setStripeUrl] = _useS("");
+  React.useEffect(() => {
+    let alive = true;
+    (async () => {
+      const url = await getStripeProUrl();
+      if (alive) setStripeUrl(url);
+      /* never downgrade a just-paid local flag; upgrade across devices */
+      const pro = getProStatus() || await checkProRemote(getUserEmail());
+      if (alive) { setIsPro(pro); setProStatus(pro); }
+    })();
+    return () => { alive = false; };
+  }, []);
   const st = runState === "running" ? { cls: "running", txt: "◍ Running…" }
            : runState === "ready" ? { cls: "ready", txt: "◉ Windows Ready" }
            : { cls: "idle", txt: "◌ Awaiting Run" };
@@ -932,6 +946,21 @@ function Sidebar(props) {
         <button className="btn-meth" onClick={onShowMethodology}>
           <span className="meth-ic">ℹ</span>Methodology &amp; Lexicon
         </button>
+
+        {isPro ? (
+          <div className="quota-chip" style={{ borderColor: "var(--accent)" }}>
+            <span className="quota-ic" style={{ color: "var(--accent)" }}>★</span>
+            <span className="quota-body">
+              <span className="quota-k">Signal</span>
+              <span className="quota-v" style={{ color: "var(--accent)", fontWeight: 700 }}>PRO · full access</span>
+            </span>
+          </div>
+        ) : stripeUrl ? (
+          <a className="btn-ppt" href={proCheckoutLink(stripeUrl, getUserEmail())} target="_blank" rel="noopener"
+             style={{ textDecoration: "none", textAlign: "center" }}>
+            <span className="ppt-ic">★</span>Go Pro — Unlock Full Access
+          </a>
+        ) : null}
 
         <div className={"quota-chip" + (geminiCalls >= 1425 ? " quota-red" : geminiCalls >= 1200 ? " quota-amber" : "")}>
           <span className="quota-ic">◉</span>

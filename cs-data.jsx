@@ -274,7 +274,7 @@ async function fetchSharedConfig() {
     rows.forEach(r => {
       const k = (r[0] || "").replace(/^"|"$/g, "").trim().toLowerCase();
       const v = (r[1] || "").replace(/^"|"$/g, "").trim();
-      if (k && v && ["apify_token", "gemini_key"].includes(k)) cfg[k] = v;
+      if (k && v && ["apify_token", "gemini_key", "stripe_pro_url"].includes(k)) cfg[k] = v;
     });
     return (_sharedConfig = cfg);
   } catch { return (_sharedConfig = {}); }
@@ -375,6 +375,30 @@ async function serverProxyAvailable() {
   return _serverProxy;
 }
 function getUserEmail() { try { return localStorage.getItem("signal_user_email") || ""; } catch { return ""; } }
+
+/* ---- Signal Pro (paid tier) ---- */
+function getProStatus() { try { return localStorage.getItem("signal_pro") === "true"; } catch { return false; } }
+function setProStatus(v) { try { v ? localStorage.setItem("signal_pro", "true") : localStorage.removeItem("signal_pro"); } catch {} }
+/* Authoritative check against the "Pro" sheet tab (keeps the local flag honest). */
+async function checkProRemote(email) {
+  if (!email) return false;
+  try {
+    const r = await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Pro`);
+    if (!r.ok) return false;
+    const emails = (await r.text()).split(/\r?\n/)
+      .map(l => (l.split(",")[0] || "").replace(/^"|"$/g, "").trim().toLowerCase())
+      .filter(e => e.includes("@"));
+    return emails.includes(email.toLowerCase().trim());
+  } catch { return false; }
+}
+async function getStripeProUrl() { const c = await fetchSharedConfig(); return (c && c.stripe_pro_url) || ""; }
+/* Stripe Payment Link with the user's email prefilled + tagged for the webhook. */
+function proCheckoutLink(base, email) {
+  if (!base) return "";
+  const sep = base.includes("?") ? "&" : "?";
+  const e = encodeURIComponent(email || "");
+  return `${base}${sep}prefilled_email=${e}&client_reference_id=${e}`;
+}
 
 /* Direct browser call to Gemini with auto-retry on 429/503 */
 async function callGeminiBrowser(prompt, apiKey, attempt = 0) {
