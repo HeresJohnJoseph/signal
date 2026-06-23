@@ -95,6 +95,23 @@ RULES:
 - Base all values on real search results; use informed estimates where search data is incomplete`;
 }
 
+// Human category phrasing for the suggest prompt.
+const CAT_WORD = {
+  alcohol: "alcohol / beverage", qsr: "quick-service restaurant", retail: "retail",
+  telecoms: "telecommunications", beauty: "beauty & cosmetics", skincare: "skincare", haircare: "haircare",
+};
+
+// Competitor-discovery prompt — market- and category-aware (server-side only).
+function buildSuggestPrompt(p) {
+  const mkt = MARKET_LABEL[p.market] || "South Africa";
+  const cat = CAT_WORD[p.category] || p.category || "consumer";
+  const named = p.name && p.name.toLowerCase() !== cat.toLowerCase();
+  return `Use Google Search to find the 4 most important, currently-active ${cat} brands competing in the ${mkt} market${named ? ` — direct competitors to "${p.name}"` : ""}.
+Return STRICT JSON only — no prose, no markdown:
+{"competitors":[{"name":"Brand","note":"3-5 word positioning","ig":"https://instagram.com/handle"}]}
+Exactly 4 real ${cat} brands active in ${mkt}. Include each brand's real Instagram URL if findable.`;
+}
+
 // Period-over-period social audit prompt (server-side only).
 function buildAuditPrompt(p) {
   const mkt = MARKET_LABEL[p.market] || "South Africa";
@@ -157,8 +174,9 @@ export default async function handler(req, res) {
   /* Preferred paths build the prompt server-side from structured params, so the
      methodology never leaves the server. Legacy path: a raw prompt (suggest). */
   const prompt =
-    (body && body.params) ? buildAnalyzePrompt(body.params) :
-    (body && body.audit)  ? buildAuditPrompt(body.audit) :
+    (body && body.params)  ? buildAnalyzePrompt(body.params) :
+    (body && body.audit)   ? buildAuditPrompt(body.audit) :
+    (body && body.suggest) ? buildSuggestPrompt(body.suggest) :
     (body && body.prompt);
   if (!prompt) return res.status(400).json({ error: "Missing params or prompt." });
 

@@ -631,15 +631,10 @@ function titleRole(r) {
 }
 function clampPct(n) { const v = Number(n); return Number.isFinite(v) ? Math.max(0, Math.min(100, Math.round(v))) : 0; }
 
-/* ---- suggestCompetitors: grounded competitor discovery ---- */
-async function suggestCompetitors(clientLabel, category, apiKey) {
-  const prompt =
-`Search for and list the 4 most important South African market competitors for the alcohol brand "${clientLabel}" (category: ${category}).
-Use Google Search to find real, currently active brands competing in this category in South Africa.
-Return STRICT JSON only — no prose, no markdown:
-{"competitors":[{"name":"Brand","note":"3-5 word positioning","ig":"https://instagram.com/handle"}]}
-Exactly 4 real competing brands. Include their actual Instagram URL if findable.`;
-  const raw = await callGemini(prompt, apiKey);
+/* ---- suggestCompetitors: grounded competitor discovery ----
+   Market- and category-aware; prompt is built server-side in /api/analyze. */
+async function suggestCompetitors(name, category, market) {
+  const raw = await callProxy({ suggest: { name, category, market: market || "sa" } });
   /* suggestCompetitors returns plain JSON, not dual-format */
   let s = raw.trim().replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
   const a = s.indexOf("{"), b = s.lastIndexOf("}");

@@ -217,12 +217,25 @@ function App() {
 
   const onSuggest = async () => {
     setSuggesting(true);
+    setFetchErr(null);
     try {
-      const comps = await suggestCompetitors(brandLabel, brandCat, apiKey);
+      const comps = await suggestCompetitors(brandLabel, BRANDS[brandSel].category, marketSel);
+      if (!comps.length) { setFetchErr("AI didn't return any competitors — try again."); return; }
       setCards(comps.map((c) => freshCard(c, ctxColor, brandSel, "ai")));
       setRunState("ready");
-    } catch (e) { console.error("Suggest failed", e); }
-    setSuggesting(false);
+      if (window.posthog) window.posthog.capture('suggest_competitors', { brand: brandSel, market: marketSel, count: comps.length });
+    } catch (e) {
+      console.error("Suggest failed", e);
+      const m = (e.message || "").toLowerCase();
+      setFetchErr(
+        /quota|rate|429/.test(m) ? "AI is at its limit right now — try again in a minute." :
+        /not_allowed|403/.test(m) ? "Your account doesn't have access to AI suggestions yet." :
+        /no_server|proxy|failed to fetch|networkerror/.test(m) ? "Couldn't reach the AI service — check your connection and try again." :
+        "Couldn't suggest competitors — please try again."
+      );
+    } finally {
+      setSuggesting(false);
+    }
   };
 
   const stateForExport = () => ({ brandLabel, brandColor: ctxColor, month, year, cards, signalKeyword });
