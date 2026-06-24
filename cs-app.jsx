@@ -19,6 +19,9 @@ function App() {
 
   const resetKey = () => { clearKey(); setApiKey(""); };
 
+  /* Daily free-tier exhaustion is NOT worth a 65s retry — it won't clear until
+     tomorrow. Distinguish it from a transient per-minute spike. */
+  const isDailyQuotaErr = (e) => /per day|perday|daily|requests per day/i.test(e.message || "");
   const isRateLimitErr = (e) => {
     const m = (e.message || "").toLowerCase();
     return m.includes("rate") || m.includes("quota") || m.includes("429");
@@ -116,8 +119,13 @@ function App() {
           } catch (e) {
             console.error("Auto-analyze failed for", fetched[i].name, e);
             if (e.message?.toLowerCase().includes("leaked")) { resetKey(); return; }
+            if (isDailyQuotaErr(e)) {
+              /* daily cap hit — mark this and all remaining windows, stop (won't clear today) */
+              setCards(prev => prev.map((c, ci) => (ci >= i && !c.analyzed) ? { ...c, analyzing: false, analyzeError: "quota_daily" } : c));
+              break;
+            }
             if (isRateLimitErr(e)) {
-              /* silent retry: wait out the rate-limit window, try once more */
+              /* silent retry: wait out the per-minute window, try once more */
               await new Promise(r => setTimeout(r, 65000));
               try {
                 const res = await analyzeWindow(fetched[i], brandLabel, month, year, apiKey, signalKeyword, marketSel);
@@ -128,7 +136,7 @@ function App() {
               } catch (e2) {
                 console.error("Retry failed for", fetched[i].name, e2);
                 if (e2.message?.toLowerCase().includes("leaked")) { resetKey(); return; }
-                setCards(prev => prev.map((c, ci) => ci === i ? { ...c, analyzing: false, analyzeError: "Gemini hit its rate limit — click Re-analyze to retry. (Free tier resets every minute; daily quota resets overnight.)" } : c));
+                setCards(prev => prev.map((c, ci) => ci === i ? { ...c, analyzing: false, analyzeError: isDailyQuotaErr(e2) ? "quota_daily" : "rate_limit" } : c));
                 continue;
               }
             }
@@ -156,8 +164,9 @@ function App() {
     } catch (e) {
       console.error("Analyze failed", e);
       if (e.message?.toLowerCase().includes("leaked")) { resetKey(); return; }
+      if (isDailyQuotaErr(e)) { patchCard(ci, { analyzing: false, analyzeError: "quota_daily" }); return; }
       if (isRateLimitErr(e)) {
-        /* silent retry: wait out the rate-limit window, try once more */
+        /* silent retry: wait out the per-minute window, try once more */
         await new Promise(r => setTimeout(r, 65000));
         try {
           const res = await analyzeWindow(card, brandLabel, month, year, apiKey, signalKeyword, marketSel);
@@ -168,7 +177,7 @@ function App() {
         } catch (e2) {
           console.error("Retry failed", e2);
           if (e2.message?.toLowerCase().includes("leaked")) { resetKey(); return; }
-          patchCard(ci, { analyzing: false, analyzeError: "Gemini hit its rate limit — click Re-analyze to retry. (Free tier resets every minute; daily quota resets overnight.)" });
+          patchCard(ci, { analyzing: false, analyzeError: isDailyQuotaErr(e2) ? "quota_daily" : "rate_limit" });
           return;
         }
       }

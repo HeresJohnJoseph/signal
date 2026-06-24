@@ -383,8 +383,10 @@ function WindowPage(props) {
         <div className="wp-err-bar">
           <span className="web-ic">⚠</span>
           <span className="web-msg">
-            {card.analyzeError.startsWith("quota_exceeded")
-              ? "Gemini hit its rate limit — click Re-analyze to retry. (Free tier resets every minute; daily quota resets overnight.)"
+            {card.analyzeError === "quota_daily"
+              ? "Signal's shared AI allowance for today is used up — it resets tomorrow (≈ midnight PT). Your loaded windows and exports still work."
+              : (card.analyzeError === "rate_limit" || card.analyzeError.startsWith("quota_exceeded"))
+              ? "Signal's AI is busy right now — wait a moment, then click Re-analyze. (Shared free tier: ~10 requests/minute.)"
               : card.analyzeError.startsWith("No <chart_data>")
                 ? "Analysis returned an incomplete response — click Re-analyze to try again."
                 : card.analyzeError.startsWith("Gemini blocked")
