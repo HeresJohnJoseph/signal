@@ -45,6 +45,27 @@ function doPost(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
+    // --- Brand search log: record every brand searched in the app so John
+    //     knows what's in demand and which brands to add to the dataset. ---
+    if (data.type === 'brand_search') {
+      const bs = ss.getSheetByName('Brand Requests') || ss.insertSheet('Brand Requests');
+      if (bs.getLastRow() === 0) {
+        bs.appendRow(['Timestamp', 'Brand', 'Market', 'In dataset?', 'Category', 'Searched by']);
+        bs.getRange(1, 1, 1, 6).setFontWeight('bold');
+      }
+      bs.appendRow([
+        data.timestamp || new Date().toISOString(),
+        data.brand || '',
+        (data.market || '').toString().toUpperCase(),
+        data.known === 'yes' ? 'Yes' : 'No — add',
+        data.category || '',
+        data.email || ''
+      ]);
+      return ContentService
+        .createTextOutput(JSON.stringify({ status: 'ok', logged: true }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
     // --- Default: a beta signup → "Signups" tab ---
     const sheet = ss.getSheetByName('Signups') || ss.insertSheet('Signups');
 

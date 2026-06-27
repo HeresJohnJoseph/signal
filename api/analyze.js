@@ -102,8 +102,19 @@ const CAT_WORD = {
 };
 
 // Competitor-discovery prompt — market- and category-aware (server-side only).
+// When category is "auto"/missing, Gemini infers the brand's category from our
+// fixed list and returns it (powers free-text "search by brand").
 function buildSuggestPrompt(p) {
   const mkt = MARKET_LABEL[p.market] || "South Africa";
+  const auto = !p.category || p.category === "auto";
+
+  if (auto) {
+    return `Use Google Search to identify the brand "${p.name}" in the ${mkt} market, determine which category it belongs to, and find its 4 most important, currently-active direct competitors there.
+Return STRICT JSON only — no prose, no markdown:
+{"category":"alcohol|qsr|retail|telecoms|beauty|skincare|haircare|other","competitors":[{"name":"Brand","note":"3-5 word positioning","ig":"https://instagram.com/handle"}]}
+Pick the single closest category from that exact list (use "other" only if none fit). Exactly 4 real brands that genuinely compete with "${p.name}" in ${mkt}. Include each competitor's real Instagram URL if findable.`;
+  }
+
   const cat = CAT_WORD[p.category] || p.category || "consumer";
   const named = p.name && p.name.toLowerCase() !== cat.toLowerCase();
   return `Use Google Search to find the 4 most important, currently-active ${cat} brands competing in the ${mkt} market${named ? ` — direct competitors to "${p.name}"` : ""}.

@@ -42,6 +42,8 @@ function App() {
   const [fetchErr, setFetchErr] = useState(null);
   const [busy, setBusy] = useState(false);
   const [suggesting, setSuggesting] = useState(false);
+  const [searching, setSearching] = useState(false);
+  const [disclaimer, setDisclaimer] = useState(null);
   const [cards, setCards] = useState([]);
   const [geminiCalls, setGeminiCalls] = useState(() => getGeminiCallsToday());
 
@@ -66,11 +68,12 @@ function App() {
 
   const brandLabel = contextLabel(brandSel, marketSel);
   const brandCat = BRANDS[brandSel].cat;
-  const ctxColor = colors[brandSel];
+  const ctxColor = colors[brandSel] || (BRANDS[brandSel] && BRANDS[brandSel].color) || "#FF5500";
   const hasCards = cards.length > 0;
+  const isCustomBrand = brandSel === CUSTOM_BRAND_KEY;
 
-  const invalidate = () => { setRunState("idle"); setCards([]); setFetchErr(null); };
-  const chooseBrand = (b) => { if (b !== brandSel) { setBrandSel(b); setRunState("idle"); setCards([]); setFetchErr(null); } };
+  const invalidate = () => { setRunState("idle"); setCards([]); setFetchErr(null); setDisclaimer(null); };
+  const chooseBrand = (b) => { if (b !== brandSel) { setBrandSel(b); setRunState("idle"); setCards([]); setFetchErr(null); setDisclaimer(null); } };
   const chooseMonth = (m) => { setMonth(m); invalidate(); };
   const chooseYear  = (y) => { setYear(y); invalidate(); };
   const chooseMarket = (m) => {
@@ -78,13 +81,65 @@ function App() {
     localStorage.setItem("cs_market", m);
     setMarketSel(m);
     /* US/UK have no per-brand alcohol tabs — snap an alcohol brand to a category default */
-    if (m !== "sa" && BRANDS[brandSel].category === "alcohol" && brandSel !== "hunters") setBrandSel("hunters");
-    setRunState("idle"); setCards([]); setFetchErr(null);
+    if (m !== "sa" && BRANDS[brandSel] && BRANDS[brandSel].category === "alcohol" && brandSel !== "hunters") setBrandSel("hunters");
+    setRunState("idle"); setCards([]); setFetchErr(null); setDisclaimer(null);
+  };
+
+  /* Free-text brand search: known brand → select it; unknown → live AI discovery. */
+  const onBrandSearch = async (query) => {
+    const q = (query || "").trim();
+    if (!q) return;
+    setFetchErr(null);
+    const knownKey = findKnownBrand(q, marketSel);
+    if (knownKey) {
+      setDisclaimer(null);
+      chooseBrand(knownKey);
+      logBrandSearch(q, marketSel, true, BRANDS[knownKey].category);
+      if (window.posthog) window.posthog.capture('brand_searched', { brand: q, known: true, market: marketSel });
+      return;
+    }
+    /* Unknown brand — needs the live AI service */
+    if (DEMO_MODE && !serverProxy) {
+      setFetchErr("Live brand search needs the AI service — not available in this demo view.");
+      return;
+    }
+    setSearching(true);
+    setDisclaimer(null);
+    setRunState("running");
+    setCards([]);
+    try {
+      const { competitors, category } = await searchBrandCompetitors(q, marketSel);
+      if (!competitors.length) { setFetchErr(`Couldn't find competitors for "${q}" — try a more specific name.`); setRunState("idle"); return; }
+      const key = registerCustomBrand(q, category, ctxColor);
+      setBrandSel(key);
+      setCards(competitors.map((c) => freshCard(c, BRANDS[key].color, key, "ai")));
+      setRunState("ready");
+      setDisclaimer({ brand: q, category });
+      logBrandSearch(q, marketSel, false, category);
+      if (window.posthog) window.posthog.capture('brand_searched', { brand: q, known: false, market: marketSel, category });
+    } catch (e) {
+      console.error("Brand search failed", e);
+      const m = (e.message || "").toLowerCase();
+      setFetchErr(
+        /quota|rate|429/.test(m) ? "AI is at its limit right now — try again in a minute." :
+        /not_allowed|403/.test(m) ? "Your account doesn't have AI access yet." :
+        /no_server|proxy|failed to fetch|networkerror/.test(m) ? "Couldn't reach the AI service — check your connection." :
+        `Couldn't find "${q}" — check the spelling and try again.`
+      );
+      setRunState("idle");
+      logBrandSearch(q, marketSel, false, "");
+      if (window.posthog) window.posthog.capture('brand_searched', { brand: q, known: false, market: marketSel, error: true });
+    } finally {
+      setSearching(false);
+    }
   };
 
   const onRun = async () => {
     setRunState("running");
     setFetchErr(null);
+
+    /* Custom (searched) brand has no sheet tab — re-run live discovery instead. */
+    if (isCustomBrand) { await onBrandSearch(BRANDS[CUSTOM_BRAND_KEY].name); return; }
 
     /* Demo mode — load pre-analyzed cards instantly, no API */
     if (DEMO_MODE) {
@@ -287,6 +342,7 @@ function App() {
       <Sidebar
         marketSel={marketSel} setMarket={chooseMarket}
         brandSel={brandSel} setBrandSel={chooseBrand}
+        onBrandSearch={onBrandSearch} searching={searching}
         month={month} setMonth={chooseMonth} year={year} setYear={chooseYear}
         runState={runState} onRun={onRun} colors={colors}
         onGenerate={onGenerate} busy={busy} canExport={canExport}
@@ -311,6 +367,15 @@ function App() {
               <div>{hasCards ? `${analyzedCount}/${cards.length} analyzed` : "—"}</div>
             </div>
           </div>
+
+          {disclaimer && (
+            <div className="brand-disclaimer">
+              <span className="bd-icon">⚠</span>
+              <div className="bd-text">
+                <strong>{disclaimer.brand}</strong> isn’t in Signal’s curated dataset yet. These competitors were discovered live via AI web search{disclaimer.category && disclaimer.category !== "other" ? ` (${disclaimer.category} category)` : ""} and haven’t been hand-verified — treat them as a strong starting point, not gospel. Your search has been logged so we can add {disclaimer.brand} to the dataset.
+              </div>
+            </div>
+          )}
 
           {runState === "running" ? (
             <div className="stage-msg">

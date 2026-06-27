@@ -806,9 +806,33 @@ function SocialAuditPanel({ show, onClose, cards, apiKey, year }) {
 }
 
 /* ---------- Sidebar control panel ---------- */
+/* Free-text brand search — known brands jump to their context, unknown brands
+   trigger live AI competitor discovery (with an on-screen disclaimer). */
+function BrandSearch({ onBrandSearch, searching }) {
+  const [q, setQ] = _useS("");
+  const submit = () => { const v = q.trim(); if (v && onBrandSearch) onBrandSearch(v); };
+  return (
+    <div className="brand-search">
+      <input
+        className="brand-search-input"
+        type="text"
+        value={q}
+        placeholder="Search any brand…"
+        onChange={(e) => setQ(e.target.value)}
+        onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
+        disabled={searching}
+        aria-label="Search any brand" />
+      <button className={"brand-search-btn" + (searching ? " busy" : "")} onClick={submit} disabled={searching || !q.trim()} title="Search">
+        {searching ? "…" : "⌕"}
+      </button>
+    </div>
+  );
+}
+
 function Sidebar(props) {
   const { marketSel = "sa", setMarket,
-          brandSel, setBrandSel, month, setMonth, year, setYear, runState, onRun,
+          brandSel, setBrandSel, onBrandSearch, searching,
+          month, setMonth, year, setYear, runState, onRun,
           colors, onGenerate, busy, canExport,
           signalKeyword, setSignalKeyword,
           onGenerateReport, reportBusy, canReport,
@@ -871,6 +895,7 @@ function Sidebar(props) {
 
         <div className="sb-block">
           <div className="step-eyebrow"><span className="num">02</span><span className="lbl">{marketSel === "sa" ? "Select Brand" : "Select Category"}</span></div>
+          <BrandSearch onBrandSearch={onBrandSearch} searching={searching} />
           <div className="brand-list">
             {marketSel === "sa"
               ? Object.entries(BRAND_CATEGORIES).map(([catKey, catMeta]) => {

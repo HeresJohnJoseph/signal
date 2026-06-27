@@ -650,6 +650,82 @@ async function suggestCompetitors(name, category, market) {
   return out.competitors.slice(0, 4);
 }
 
+/* ---- Search by brand ----
+   Known brands resolve to a tracked context; unknown brands are discovered
+   live (Gemini infers the category + 4 competitors), flagged with a disclaimer,
+   and logged so the dataset can grow. ---- */
+const CUSTOM_BRAND_KEY = "__custom";
+
+/* Match a free-text query against a known brand (or category) name. */
+function findKnownBrand(query, market) {
+  const q = String(query || "").trim().toLowerCase();
+  if (!q) return null;
+  /* exact/contains match on a real dataset brand (skip the transient custom slot) */
+  for (const b of Object.values(BRANDS)) {
+    if (b.key === CUSTOM_BRAND_KEY) continue;
+    const n = b.name.toLowerCase();
+    if (n === q || n.includes(q) || q.includes(n)) return b.key;
+  }
+  /* category label match (e.g. "skincare", "qsr") */
+  for (const [catKey, meta] of Object.entries(BRAND_CATEGORIES)) {
+    if (meta.label.toLowerCase() === q || catKey === q) {
+      const rep = Object.values(BRANDS).find(b => b.category === catKey);
+      if (rep) return rep.key;
+    }
+  }
+  return null;
+}
+
+/* Register the searched brand as a transient "__custom" context so the rest of
+   the app (colors, platforms, labels, exports) keeps working unchanged. */
+function registerCustomBrand(name, category, color) {
+  const cat = category || "other";
+  BRANDS[CUSTOM_BRAND_KEY] = {
+    key: CUSTOM_BRAND_KEY,
+    name: String(name).trim(),
+    color: color || "#FF5500",
+    cat: (BRAND_CATEGORIES[cat] && BRAND_CATEGORIES[cat].label) || "Custom",
+    category: cat,
+  };
+  return CUSTOM_BRAND_KEY;
+}
+
+/* Discover a brand's category + competitors via the grounded suggest endpoint. */
+async function searchBrandCompetitors(name, market) {
+  const raw = await callProxy({ suggest: { name, category: "auto", market: market || "sa" } });
+  let s = raw.trim().replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
+  const a = s.indexOf("{"), b = s.lastIndexOf("}");
+  if (a !== -1 && b !== -1) s = s.slice(a, b + 1);
+  const out = JSON.parse(s);
+  if (!out || !Array.isArray(out.competitors)) throw new Error("Bad AI response");
+  const known = ["alcohol","qsr","retail","telecoms","beauty","skincare","haircare"];
+  const category = known.includes(out.category) ? out.category : "other";
+  return { competitors: out.competitors.slice(0, 4), category };
+}
+
+/* Apps Script web app (same endpoint signups use) — log every brand search so
+   John knows what was searched and which brands to add to the dataset. */
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxFSOZ7VSoTWRLdSzfxe9rrImyEGell3VS42JX839bxLyEUF-NEKTrXkQJeZ6rSVXQWrw/exec";
+function logBrandSearch(brand, market, known, category) {
+  try {
+    /* text/plain avoids a CORS preflight Apps Script can't answer; fire-and-forget */
+    fetch(APPS_SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({
+        type: "brand_search",
+        brand: String(brand || "").trim(),
+        market: market || "sa",
+        known: known ? "yes" : "no",
+        category: category || "",
+        email: getUserEmail() || "",
+        timestamp: new Date().toISOString(),
+      }),
+      keepalive: true,
+    }).catch(() => {});
+  } catch {}
+}
+
 /* ---- auditCompetitor: month-by-month social audit over a period range ---- */
 async function auditCompetitor(name, fromMonth, fromYear, toMonth, toYear, apiKey) {
   /* Prompt is built server-side in /api/analyze from these params (IP protection). */
@@ -1696,4 +1772,6 @@ Object.assign(window, {
   loadSheetCompetitors, invalidateSheetCache,
   callGemini, parseChartData, parseInsight,
   analyzeWindow, suggestCompetitors, buildPrompt, generatePDF, generateReport, generatePPT,
+  searchBrandCompetitors, findKnownBrand, registerCustomBrand, logBrandSearch,
+  CUSTOM_BRAND_KEY, BRAND_CATEGORIES, contextLabel,
 });
