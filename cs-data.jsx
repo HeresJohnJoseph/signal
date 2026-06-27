@@ -4,6 +4,12 @@
    Source: Competitor Social Media Tracker (Google Sheet)
    ============================================================ */
 
+/* Shareable watermark — every export carries this credit + referral link.
+   The ?ref=deck attributes anyone who opens a shared file back through PostHog. */
+const SIGNAL_SHARE_URL   = "https://signal-eight-opal.vercel.app/?ref=deck";
+const SIGNAL_SHARE_HOST  = "signal-eight-opal.vercel.app/?ref=deck";
+const SIGNAL_SHARE_CTA   = "Made with Signal — get your own competitor analysis at " + SIGNAL_SHARE_HOST;
+
 const BRAND_CATEGORIES = {
   alcohol:  { label: "Alcohol",      color: "#2E6B2F" },
   qsr:      { label: "QSR",          color: "#E87722" },
@@ -816,8 +822,10 @@ async function generatePDF(state) {
 
     // footer
     doc.setFont("helvetica", "bold"); doc.setFontSize(12); doc.setTextColor(...text2);
-    doc.text("J O H N   J O S E P H", PW / 2, PH - 34, { align: "center" });
-    doc.setFontSize(10); doc.setTextColor(...accent);
+    doc.text("J O H N   J O S E P H", PW / 2, PH - 38, { align: "center" });
+    doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(...text3);
+    doc.textWithLink(SIGNAL_SHARE_CTA, (PW - doc.getTextWidth(SIGNAL_SHARE_CTA)) / 2, PH - 26, { url: SIGNAL_SHARE_URL });
+    doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.setTextColor(...accent);
     doc.text(`${state.brandLabel.toUpperCase()} BRAND`, PW - PAD, PH - 42, { align: "right" });
     doc.text(`WINDOW ${state.year}`, PW - PAD, PH - 30, { align: "right" });
   });
@@ -932,6 +940,8 @@ async function generateReport(state) {
   doc.text("Prepared by John Joseph  ·  Strategy Intelligence  ·  VML", PAD, PH - 54);
   doc.setFontSize(9); doc.setTextColor(...text3);
   doc.text("CONFIDENTIAL — FOR INTERNAL STRATEGIC USE ONLY", PAD, PH - 37);
+  doc.setFontSize(8);
+  doc.textWithLink(SIGNAL_SHARE_CTA, PAD, PH - 22, { url: SIGNAL_SHARE_URL });
 
   /* ── PAGE 2: CATEGORY OVERVIEW ── */
   doc.addPage();
@@ -1187,7 +1197,9 @@ async function generateReport(state) {
     }
 
     /* footer */
-    doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.setTextColor(...text3);
+    doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...text3);
+    doc.textWithLink(SIGNAL_SHARE_CTA, (PW - doc.getTextWidth(SIGNAL_SHARE_CTA))/2, PH-34, { url: SIGNAL_SHARE_URL });
+    doc.setFontSize(8.5);
     doc.text(card_.name + " · " + period, PAD, PH-22);
     doc.text(String(idx+3), PW/2, PH-22, { align:"center" });
     doc.text("CONFIDENTIAL", PW-PAD, PH-22, { align:"right" });
@@ -1305,9 +1317,18 @@ async function generatePPT(state) {
     );
   };
 
-  /* ── Helper: footer (centred mark + corner label + page no.) ── */
+  /* ── Helper: faint diagonal SIGNAL watermark (open slides only) ── */
+  const watermark = (slide) => {
+    slide.addText("SIGNAL", { x:-1, y:2.4, w:W+2, h:2.6, fontSize:150, bold:true, color:"141A28", align:"center", fontFace:SERIF, rotate:340 });
+  };
+
+  /* ── Helper: footer — credit watermark + referral link, on every slide ── */
   const footer = (slide, pageNo) => {
-    slide.addText("SIGNAL", { x:0, y:H-0.4, w:W, h:0.22, fontSize:8, bold:true, color:TEXT3, charSpacing:3, align:"center", fontFace:MONO });
+    slide.addText(
+      [ { text: "Made with ", options:{ color:TEXT3 } },
+        { text: "Signal", options:{ color:ACCENT, bold:true } },
+        { text: " · " + SIGNAL_SHARE_HOST, options:{ color:TEXT3 } } ],
+      { x:0, y:H-0.4, w:W, h:0.22, fontSize:8, align:"center", fontFace:MONO, hyperlink:{ url:SIGNAL_SHARE_URL } });
     slide.addText(`${brandLabel.toUpperCase()}\n${monthName.toUpperCase()} ${year}`, { x:W-2.4, y:H-0.5, w:2.2, h:0.4, fontSize:7, bold:true, color:TEXT3, charSpacing:1.5, align:"right", fontFace:MONO, lineSpacingMultiple:1.1 });
     if (pageNo != null) slide.addText(String(pageNo).padStart(2,"0"), { x:0.3, y:H-0.4, w:1, h:0.22, fontSize:8, bold:true, color:TEXT3, fontFace:MONO });
   };
@@ -1316,6 +1337,7 @@ async function generatePPT(state) {
   const divider = (num, roman, italic, sub) => {
     const s = pptx.addSlide();
     darkBg(s);
+    watermark(s);
     s.addShape(pptx.ShapeType.rect, { x:0, y:0, w:0.06, h:H, fill:{color:ACCENT}, line:{color:ACCENT} });
     if (num) s.addText(num, { x:0.5, y:2.55, w:8, h:0.3, fontSize:13, bold:true, color:ACCENT, charSpacing:2, fontFace:MONO });
     s.addText(
@@ -1343,6 +1365,7 @@ async function generatePPT(state) {
   ════════════════════════════════════════ */
   const cover = pptx.addSlide();
   darkBg(cover);
+  watermark(cover);
 
   /* accent bar left edge */
   cover.addShape(pptx.ShapeType.rect, { x:0, y:0, w:0.06, h:H, fill:{color:ACCENT}, line:{color:ACCENT} });
@@ -1518,10 +1541,12 @@ async function generatePPT(state) {
       slide.addText(`◉ SIGNAL: ${signalKeyword}`, { x:W-2.45, y:H-0.44, w:2.2, h:0.24, fontSize:7.5, bold:true, color:"F5A623", fontFace:"Courier New" });
     }
 
-    /* footer */
-    slide.addText(`John Joseph · Strategy Intelligence · ${brandLabel} Brand Window · ${monthName} ${year}`, {
-      x:0.2, y:H-0.28, w:W-0.4, h:0.2, fontSize:7, color:TEXT3, fontFace:"Courier New"
-    });
+    /* footer — credit watermark + referral link */
+    slide.addText(
+      [ { text: "Made with ", options:{ color:TEXT3 } },
+        { text: "Signal", options:{ color:ACCENT, bold:true } },
+        { text: " · " + SIGNAL_SHARE_HOST + "   ·   " + brandLabel + " Brand Window · " + monthName + " " + year, options:{ color:TEXT3 } } ],
+      { x:0.2, y:H-0.28, w:W-0.4, h:0.2, fontSize:7, fontFace:MONO, hyperlink:{ url:SIGNAL_SHARE_URL } });
   });
 
   /* ════════════════════════════════════════
@@ -1644,6 +1669,7 @@ async function generatePPT(state) {
   ════════════════════════════════════════ */
   const mSlide = pptx.addSlide();
   darkBg(mSlide);
+  watermark(mSlide);
   mSlide.addShape(pptx.ShapeType.rect, { x:0, y:0, w:0.06, h:H, fill:{color:ACCENT}, line:{color:ACCENT} });
   kicker(mSlide, "How this was built", 0.5, 0.5, 9);
   h1TwoTone(mSlide, "The", "Methodology", 0.45, 0.76, W-1, { fontSize:34, h:0.7 });
