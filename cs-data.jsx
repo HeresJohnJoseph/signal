@@ -1253,6 +1253,14 @@ async function generatePPT(state) {
   const TEXT2   = "8892A4";
   const TEXT3   = "4C5669";
   const WHITE   = "FFFFFF";
+  const CARD2   = "232A3D";
+  const GREEN   = "22C55E";
+
+  /* Editorial type system (Bernini formula, Signal CI):
+     SERIF for headlines (two-tone roman/italic), SANS for body, MONO for kickers. */
+  const SERIF = "Georgia";
+  const SANS  = "Calibri";
+  const MONO  = "Courier New";
 
   pptx.layout = "LAYOUT_WIDE"; /* 13.33 × 7.5 in */
   pptx.author  = "John Joseph · Strategy Intelligence";
@@ -1283,6 +1291,53 @@ async function generatePPT(state) {
     if (pct > 0) slide.addShape(pptx.ShapeType.rect, { x, y, w: w*(pct/100), h:0.065, fill:{color:fillColor}, line:{color:fillColor} });
   };
 
+  /* ── Helper: mono kicker (wide-tracked label) ── */
+  const kicker = (slide, text, x, y, w, color=ACCENT) =>
+    slide.addText(String(text).toUpperCase(), { x, y, w, h:0.2, fontSize:8, bold:true, color, charSpacing:2.5, fontFace:MONO });
+
+  /* ── Helper: two-tone serif headline (roman word + italic word, Bernini formula) ── */
+  const h1TwoTone = (slide, roman, italic, x, y, w, opts={}) => {
+    const size = opts.fontSize || 34;
+    slide.addText(
+      [ { text: roman + " ", options: { color: opts.romanColor || TEXT1, italic:false } },
+        { text: italic,      options: { color: opts.italicColor || ACCENT, italic:true } } ],
+      { x, y, w, h: opts.h || 0.7, fontSize:size, bold:true, fontFace:SERIF, align: opts.align || "left", valign:"top", wrap:true }
+    );
+  };
+
+  /* ── Helper: footer (centred mark + corner label + page no.) ── */
+  const footer = (slide, pageNo) => {
+    slide.addText("SIGNAL", { x:0, y:H-0.4, w:W, h:0.22, fontSize:8, bold:true, color:TEXT3, charSpacing:3, align:"center", fontFace:MONO });
+    slide.addText(`${brandLabel.toUpperCase()}\n${monthName.toUpperCase()} ${year}`, { x:W-2.4, y:H-0.5, w:2.2, h:0.4, fontSize:7, bold:true, color:TEXT3, charSpacing:1.5, align:"right", fontFace:MONO, lineSpacingMultiple:1.1 });
+    if (pageNo != null) slide.addText(String(pageNo).padStart(2,"0"), { x:0.3, y:H-0.4, w:1, h:0.22, fontSize:8, bold:true, color:TEXT3, fontFace:MONO });
+  };
+
+  /* ── Helper: full-bleed dark section divider ── */
+  const divider = (num, roman, italic, sub) => {
+    const s = pptx.addSlide();
+    darkBg(s);
+    s.addShape(pptx.ShapeType.rect, { x:0, y:0, w:0.06, h:H, fill:{color:ACCENT}, line:{color:ACCENT} });
+    if (num) s.addText(num, { x:0.5, y:2.55, w:8, h:0.3, fontSize:13, bold:true, color:ACCENT, charSpacing:2, fontFace:MONO });
+    s.addText(
+      [ { text: roman + " ", options: { color: TEXT1, italic:false } },
+        { text: italic,      options: { color: ACCENT, italic:true } } ],
+      { x:0.5, y:2.85, w:W-1, h:1.4, fontSize:64, bold:true, fontFace:SERIF, valign:"top", wrap:true }
+    );
+    if (sub) s.addText(sub, { x:0.5, y:4.35, w:W-2, h:0.4, fontSize:13, color:TEXT2, fontFace:SANS });
+    footer(s);
+    return s;
+  };
+
+  /* ── Helper: blend SURFACE→ACCENT by value (heatmap cell) ── */
+  const lerp = (a, b, t) => Math.round(a + (b - a) * t);
+  const hx = (h) => [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+  const heatColor = (v, max) => {
+    const t = Math.max(0, Math.min(1, (v||0) / (max||10)));
+    const [r1,g1,b1] = hx(CARD), [r2,g2,b2] = hx(ACCENT);
+    const r=lerp(r1,r2,t), g=lerp(g1,g2,t), b=lerp(b1,b2,t);
+    return [r,g,b].map(n=>n.toString(16).padStart(2,"0")).join("");
+  };
+
   /* ════════════════════════════════════════
      SLIDE 1 — COVER
   ════════════════════════════════════════ */
@@ -1292,13 +1347,9 @@ async function generatePPT(state) {
   /* accent bar left edge */
   cover.addShape(pptx.ShapeType.rect, { x:0, y:0, w:0.06, h:H, fill:{color:ACCENT}, line:{color:ACCENT} });
 
-  /* Brand icon circle */
-  cover.addShape(pptx.ShapeType.ellipse, { x:0.5, y:2.5, w:0.8, h:0.8, fill:{color:ACCENT}, line:{color:ACCENT} });
-  cover.addText("◈", { x:0.5, y:2.52, w:0.8, h:0.8, fontSize:22, color:WHITE, align:"center", fontFace:"Arial" });
-
-  cover.addText("BRAND WINDOW", { x:1.5, y:2.42, w:8, h:0.3, fontSize:9, bold:true, color:ACCENT, charSpacing:3, fontFace:"Courier New" });
-  cover.addText(`${brandLabel} Competitor Intelligence`, { x:1.5, y:2.75, w:10, h:0.85, fontSize:38, bold:true, color:TEXT1, fontFace:"Calibri", charSpacing:-0.5 });
-  cover.addText(`${monthName} ${year}  ·  Powered by Gemini + Google Search`, { x:1.5, y:3.65, w:10, h:0.3, fontSize:11, color:TEXT2, fontFace:"Calibri" });
+  kicker(cover, "Signal · Competitor Intelligence", 0.6, 2.2, 9);
+  h1TwoTone(cover, brandLabel, "Brand Window", 0.55, 2.55, W-1, { fontSize:54, h:1.7 });
+  cover.addText(`${monthName} ${year}  ·  Powered by Gemini + live Google Search`, { x:0.6, y:4.0, w:10, h:0.3, fontSize:12, color:TEXT2, fontFace:SANS });
 
   /* Stats row */
   const analyzedCards = cards.filter(c => c.analyzed);
@@ -1312,18 +1363,21 @@ async function generatePPT(state) {
     ...(signalKeyword ? [["Signal Keyword", signalKeyword]] : []),
   ];
   stats.forEach(([lbl, val], i) => {
-    const bx = 1.5 + i * 2.8;
-    card(cover, bx, 4.5, 2.5, 0.85, CARD);
-    cover.addText(lbl.toUpperCase(), { x:bx+0.18, y:4.6, w:2.2, h:0.18, fontSize:6.5, bold:true, color:TEXT3, charSpacing:1.5, fontFace:"Courier New" });
-    cover.addText(val, { x:bx+0.18, y:4.78, w:2.2, h:0.4, fontSize:18, bold:true, color:TEXT1, fontFace:"Calibri" });
+    const bx = 0.6 + i * 2.8;
+    card(cover, bx, 4.7, 2.5, 0.95, CARD);
+    cover.addText(lbl.toUpperCase(), { x:bx+0.18, y:4.82, w:2.2, h:0.18, fontSize:6.5, bold:true, color:TEXT3, charSpacing:1.5, fontFace:MONO });
+    cover.addText(val, { x:bx+0.18, y:5.02, w:2.2, h:0.45, fontSize:20, bold:true, color:i===0?TEXT1:ACCENT, fontFace:SERIF });
   });
 
-  cover.addText(`John Joseph  ·  Strategy Intelligence  ·  ${monthName} ${year}`, {
-    x:0.5, y:H-0.35, w:W-1, h:0.25, fontSize:8, color:TEXT3, fontFace:"Courier New"
-  });
+  footer(cover);
 
   /* ════════════════════════════════════════
-     SLIDES 2..N — PER COMPETITOR
+     DIVIDER — THE FIELD
+  ════════════════════════════════════════ */
+  if (cards.length) divider("01", "The", "Field", `${cards.length} competitor${cards.length>1?"s":""} reviewed across social, content and paid.`);
+
+  /* ════════════════════════════════════════
+     SLIDES — PER COMPETITOR
   ════════════════════════════════════════ */
   cards.forEach((c, idx) => {
     const slide = pptx.addSlide();
@@ -1337,8 +1391,8 @@ async function generatePPT(state) {
     /* index badge */
     slide.addShape(pptx.ShapeType.roundRect, { x:0.32, y:0.24, w:0.44, h:0.26, fill:{color:ACCENT}, line:{color:ACCENT}, rectRadius:0.05 });
     slide.addText(`${String(idx+1).padStart(2,"0")}/${String(cards.length).padStart(2,"0")}`, { x:0.32, y:0.25, w:0.44, h:0.24, fontSize:7.5, bold:true, color:WHITE, align:"center", fontFace:"Courier New" });
-    slide.addText(c.name, { x:0.9, y:0.2, w:6, h:0.36, fontSize:22, bold:true, color:TEXT1, fontFace:"Calibri", charSpacing:-0.3 });
-    slide.addText("SOCIAL PRESENCE & CREATIVE  ·  " + monthName.toUpperCase() + " " + year, { x:0.9, y:0.57, w:7, h:0.2, fontSize:7, bold:true, color:TEXT3, charSpacing:1.5, fontFace:"Courier New" });
+    slide.addText(c.name, { x:0.9, y:0.18, w:6, h:0.4, fontSize:24, bold:true, color:TEXT1, fontFace:SERIF, charSpacing:-0.3 });
+    slide.addText("SOCIAL PRESENCE & CREATIVE  ·  " + monthName.toUpperCase() + " " + year, { x:0.9, y:0.58, w:7, h:0.2, fontSize:7, bold:true, color:TEXT3, charSpacing:1.5, fontFace:MONO });
 
     /* score badge */
     if (c.effectivenessScore != null) {
@@ -1471,13 +1525,128 @@ async function generatePPT(state) {
   });
 
   /* ════════════════════════════════════════
+     SYNTHESIS — VERDICT (only with ≥2 analysed competitors)
+  ════════════════════════════════════════ */
+  const CS_DIMS = [
+    ["platformNative",        "Native"],
+    ["culturalRelevance",     "Cultural"],
+    ["visualDistinctiveness", "Visual"],
+    ["strategicClarity",      "Clarity"],
+    ["engagementPotential",   "Engage"],
+  ];
+  const ranked = cards
+    .filter(c => c.analyzed && c.effectivenessScore != null)
+    .sort((a, b) => b.effectivenessScore - a.effectivenessScore);
+
+  if (ranked.length >= 2) {
+    divider("02", "The", "Verdict", "How the field ranks once the scores are in.");
+
+    /* ── LEADERBOARD ── */
+    const lb = pptx.addSlide();
+    darkBg(lb);
+    lb.addShape(pptx.ShapeType.rect, { x:0, y:0, w:0.06, h:H, fill:{color:ACCENT}, line:{color:ACCENT} });
+    kicker(lb, "The Verdict · Leaderboard", 0.5, 0.4, 9);
+    h1TwoTone(lb, "The", "leaderboard", 0.45, 0.66, W-1, { fontSize:34, h:0.7 });
+
+    const rows = ranked.slice(0, 5);
+    const gx = 4.0, colW = (W - 0.4 - gx) / 6, rowH = 0.62, gap = 0.07;
+    const gridTop = 2.1;
+
+    /* column headers */
+    CS_DIMS.forEach(([, lbl], di) =>
+      lb.addText(lbl.toUpperCase(), { x:gx+di*colW, y:gridTop-0.32, w:colW, h:0.2, fontSize:7, bold:true, color:TEXT3, charSpacing:1, align:"center", fontFace:MONO }));
+    lb.addText("EFF /10", { x:gx+5*colW, y:gridTop-0.32, w:colW, h:0.2, fontSize:7, bold:true, color:ACCENT, charSpacing:1, align:"center", fontFace:MONO });
+
+    rows.forEach((c, ri) => {
+      const ry = gridTop + ri * (rowH + gap);
+      lb.addText(String(ri+1), { x:0.5, y:ry, w:0.4, h:rowH, fontSize:18, bold:true, color:TEXT3, valign:"middle", fontFace:SERIF });
+      lb.addText(c.name, { x:0.95, y:ry, w:2.9, h:rowH, fontSize:15, bold:true, color:TEXT1, valign:"middle", fontFace:SERIF });
+      CS_DIMS.forEach(([key], di) => {
+        const v = c.creativeScores ? c.creativeScores[key] : 0;
+        lb.addShape(pptx.ShapeType.roundRect, { x:gx+di*colW+0.04, y:ry, w:colW-0.08, h:rowH, fill:{color:heatColor(v,10)}, line:{color:BG}, rectRadius:0.04 });
+        lb.addText(String(v||"—"), { x:gx+di*colW, y:ry, w:colW, h:rowH, fontSize:13, bold:true, color:WHITE, align:"center", valign:"middle", fontFace:SANS });
+      });
+      const eff = c.effectivenessScore;
+      lb.addShape(pptx.ShapeType.roundRect, { x:gx+5*colW+0.04, y:ry, w:colW-0.08, h:rowH, fill:{color:heatColor(eff,10)}, line:{color:ACCENT}, rectRadius:0.04 });
+      lb.addText(eff.toFixed(1), { x:gx+5*colW, y:ry, w:colW, h:rowH, fontSize:14, bold:true, color:WHITE, align:"center", valign:"middle", fontFace:SERIF });
+    });
+
+    /* best-in-class band */
+    const bestOf = (key) => ranked.reduce((best, c) => {
+      const v = key === "eff" ? (c.effectivenessScore||0) : (c.creativeScores?.[key]||0);
+      return v > best.v ? { v, name: c.name } : best;
+    }, { v:-1, name:"—" });
+    const band = [
+      ["Best Effectiveness", bestOf("eff")],
+      ["Best Visual Craft",  bestOf("visualDistinctiveness")],
+      ["Most Cultural",      bestOf("culturalRelevance")],
+      ["Best Engagement",    bestOf("engagementPotential")],
+    ];
+    const bandY = gridTop + rows.length * (rowH + gap) + 0.35;
+    const bcW = (W - 0.9) / 4;
+    band.forEach(([lbl, b], bi) => {
+      const bx = 0.5 + bi * (bcW + 0.1);
+      card(lb, bx, bandY, bcW, 1.0, CARD);
+      lb.addShape(pptx.ShapeType.rect, { x:bx, y:bandY, w:0.04, h:1.0, fill:{color:ACCENT}, line:{color:ACCENT} });
+      lb.addText(lbl.toUpperCase(), { x:bx+0.2, y:bandY+0.14, w:bcW-0.3, h:0.2, fontSize:7, bold:true, color:ACCENT, charSpacing:1.2, fontFace:MONO });
+      lb.addText(b.name, { x:bx+0.2, y:bandY+0.4, w:bcW-0.3, h:0.5, fontSize:15, bold:true, color:TEXT1, valign:"top", fontFace:SERIF, wrap:true });
+    });
+    footer(lb);
+  }
+
+  /* ── HEAD TO HEAD TABLE (≥2 competitors) ── */
+  if (cards.length >= 2) {
+    const cols = cards.slice(0, 5);
+    const ht = pptx.addSlide();
+    darkBg(ht);
+    ht.addShape(pptx.ShapeType.rect, { x:0, y:0, w:0.06, h:H, fill:{color:ACCENT}, line:{color:ACCENT} });
+    kicker(ht, "The Field · At a Glance", 0.5, 0.4, 9);
+    h1TwoTone(ht, "Head to", "head", 0.45, 0.66, W-1, { fontSize:34, h:0.7 });
+
+    const topTheme = (c) => { const t = [...(c.themes||[])].filter(x=>x.value>0).sort((a,b)=>b.value-a.value)[0]; return t ? t.label : "—"; };
+    const primaryPlat = (c) => (c.snapshot||[]).find(s=>String(s.role).toLowerCase()==="primary")?.platform
+      || (c.snapshot||[]).find(s=>s.role)?.platform || "—";
+    const bestDim = (c) => { if (!c.creativeScores) return "—";
+      const e = Object.entries(c.creativeScores).sort((a,b)=>b[1]-a[1])[0];
+      return e ? (CS_DIMS.find(d=>d[0]===e[0])?.[1] || e[0]) : "—"; };
+    const rowDefs = [
+      ["Effectiveness",     (c) => c.effectivenessScore!=null ? c.effectivenessScore.toFixed(1)+" /10" : "—", true],
+      ["Primary platform",  primaryPlat],
+      ["Top content theme", topTheme],
+      ["Positive sentiment",(c) => (c.sentiment?.positive||0)+"%"],
+      ["Strongest creative",bestDim],
+    ];
+
+    const lx = 0.5, lw = 2.6, cx = lx + lw + 0.15, cwW = (W - 0.4 - cx) / cols.length;
+    const headY = 1.95, rowH = 0.78;
+
+    /* competitor name header row */
+    cols.forEach((c, ci) => {
+      const x = cx + ci * cwW;
+      card(ht, x+0.04, headY, cwW-0.08, 0.6, CARD);
+      ht.addText(c.name, { x:x+0.1, y:headY, w:cwW-0.2, h:0.6, fontSize:13, bold:true, color:TEXT1, align:"center", valign:"middle", fontFace:SERIF, wrap:true });
+    });
+
+    rowDefs.forEach(([label, fn, accent], ri) => {
+      const y = headY + 0.7 + ri * rowH;
+      ht.addText(label.toUpperCase(), { x:lx, y, w:lw, h:rowH, fontSize:8, bold:true, color:TEXT3, charSpacing:1, valign:"middle", fontFace:MONO });
+      ht.addShape(pptx.ShapeType.line, { x:lx, y:y+rowH-0.02, w:W-0.9, h:0, line:{ color:SURFACE, width:1 } });
+      cols.forEach((c, ci) => {
+        const x = cx + ci * cwW;
+        ht.addText(String(fn(c)), { x:x+0.1, y, w:cwW-0.2, h:rowH, fontSize: accent?13:11, bold:!!accent, color: accent?ACCENT:TEXT2, align:"center", valign:"middle", fontFace: accent?SERIF:SANS, wrap:true });
+      });
+    });
+    footer(ht);
+  }
+
+  /* ════════════════════════════════════════
      FINAL SLIDE — METHODOLOGY
   ════════════════════════════════════════ */
   const mSlide = pptx.addSlide();
   darkBg(mSlide);
   mSlide.addShape(pptx.ShapeType.rect, { x:0, y:0, w:0.06, h:H, fill:{color:ACCENT}, line:{color:ACCENT} });
-  mSlide.addText("METHODOLOGY", { x:0.5, y:0.5, w:6, h:0.22, fontSize:9, bold:true, color:ACCENT, charSpacing:2.5, fontFace:"Courier New" });
-  mSlide.addText("How this intelligence was built", { x:0.5, y:0.74, w:10, h:0.55, fontSize:26, bold:true, color:TEXT1, fontFace:"Calibri" });
+  kicker(mSlide, "How this was built", 0.5, 0.5, 9);
+  h1TwoTone(mSlide, "The", "Methodology", 0.45, 0.76, W-1, { fontSize:34, h:0.7 });
   const methLines = [
     "· Analysis powered by Google Gemini 2.5 Flash with live Google Search grounding",
     "· Data sourced from the Competitor Tracker Google Sheet — only rows matching the selected reporting month are included",
@@ -1488,9 +1657,7 @@ async function generatePPT(state) {
     "· Post frequency figures are estimates — supplement with screenshots from live profiles for accuracy",
   ];
   mSlide.addText(methLines.join("\n"), { x:0.5, y:1.5, w:W-1, h:4.5, fontSize:11, color:TEXT2, fontFace:"Calibri", lineSpacingMultiple:1.7, valign:"top" });
-  mSlide.addText(`John Joseph · Strategy Intelligence · ${brandLabel} · ${monthName} ${year}`, {
-    x:0.5, y:H-0.3, w:W-1, h:0.22, fontSize:7.5, color:TEXT3, fontFace:"Courier New"
-  });
+  footer(mSlide);
 
   /* ── Save ── */
   const filename = `${brandLabel.replace(/\s+/g,"_")}_Brand_Window_${monthName}_${year}.pptx`;
