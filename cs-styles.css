@@ -109,9 +109,17 @@ html, body {
 }
 .sb-block { margin-bottom: 24px; }
 
-/* ── Brand search ── */
-.brand-search { display: flex; gap: 6px; margin-bottom: 10px; }
-.brand-search-input {
+/* ── Brand dropdown (token-light selector — sheet data, no live AI) ── */
+.brand-dropdown { width: 100%; }
+
+/* ── Brand request (zero-token demand capture) ── */
+.brand-request { margin-top: 12px; }
+.brand-request-label {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 1.2px;
+  text-transform: uppercase; color: var(--text-3); margin-bottom: 6px;
+}
+.brand-request-row { display: flex; gap: 6px; }
+.brand-request-input {
   flex: 1; min-width: 0;
   padding: 9px 11px; border-radius: 10px;
   border: 1px solid var(--card-2);
@@ -119,34 +127,26 @@ html, body {
   color: var(--text-1); font-size: 13px; font-family: inherit;
   transition: border-color .12s, box-shadow .12s;
 }
-.brand-search-input::placeholder { color: var(--text-3); }
-.brand-search-input:focus {
+.brand-request-input::placeholder { color: var(--text-3); }
+.brand-request-input:focus {
   outline: none; border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-dim);
 }
-.brand-search-input:disabled { opacity: .55; cursor: progress; }
-.brand-search-btn {
-  flex: 0 0 auto; width: 38px;
+.brand-request-btn {
+  flex: 0 0 auto; padding: 0 13px;
   border-radius: 10px; border: 1px solid var(--card-2);
-  background: var(--accent); color: #0C0F16;
-  font-size: 16px; font-weight: 700; cursor: pointer;
-  transition: filter .12s, opacity .12s;
+  background: var(--surface-3); color: var(--text-1);
+  font-size: 12px; font-weight: 700; cursor: pointer;
+  transition: filter .12s, opacity .12s, background .12s;
 }
-.brand-search-btn:hover:not(:disabled) { filter: brightness(1.08); }
-.brand-search-btn:disabled { opacity: .45; cursor: default; }
-.brand-search-btn.busy { background: var(--surface-3); color: var(--text-2); }
-
-/* ── Custom-brand disclaimer banner ── */
-.brand-disclaimer {
-  display: flex; gap: 12px; align-items: flex-start;
-  margin: 0 0 20px; padding: 14px 16px;
-  border-radius: 12px;
-  border: 1px solid var(--accent);
-  background: var(--accent-dim);
+.brand-request-btn:hover:not(:disabled) { background: var(--accent); color: #0C0F16; }
+.brand-request-btn:disabled { opacity: .4; cursor: default; }
+.brand-request-msg {
+  margin-top: 8px; font-size: 12px; line-height: 1.45;
+  padding: 8px 10px; border-radius: 8px;
 }
-.brand-disclaimer .bd-icon { color: var(--accent); font-size: 16px; line-height: 1.4; flex: 0 0 auto; }
-.brand-disclaimer .bd-text { color: var(--text-1); font-size: 13px; line-height: 1.55; }
-.brand-disclaimer .bd-text strong { color: var(--accent-lt); }
+.brand-request-msg.ok { color: var(--green); background: var(--green-dim); }
+.brand-request-msg.info { color: var(--accent-lt); background: var(--accent-dim); }
 
 .brand-list { display: flex; flex-direction: column; gap: 5px; }
 .brand-opt {

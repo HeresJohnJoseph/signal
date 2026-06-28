@@ -45,21 +45,39 @@ function doPost(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
-    // --- Brand search log: record every brand searched in the app so John
-    //     knows what's in demand and which brands to add to the dataset. ---
-    if (data.type === 'brand_search') {
-      const bs = ss.getSheetByName('Brand Requests') || ss.insertSheet('Brand Requests');
-      if (bs.getLastRow() === 0) {
-        bs.appendRow(['Timestamp', 'Brand', 'Market', 'In dataset?', 'Category', 'Searched by']);
-        bs.getRange(1, 1, 1, 6).setFontWeight('bold');
+    // --- Brand request: zero-token demand capture. Every brand a user asks
+    //     for (that isn't on the platform) lands here, enriched with their
+    //     segment from the Signups tab, so John can measure latent demand —
+    //     volume, breadth, velocity — by market and by segment. ---
+    if (data.type === 'brand_request') {
+      const br = ss.getSheetByName('Brand Requests') || ss.insertSheet('Brand Requests');
+      if (br.getLastRow() === 0) {
+        br.appendRow(['Timestamp', 'Brand', 'Market', 'Requested by', 'Segment (Role)', 'Industry', 'Team Size']);
+        br.getRange(1, 1, 1, 7).setFontWeight('bold');
       }
-      bs.appendRow([
+      // Enrich with the requester's signup profile (join on email) so the
+      // demand pivot can break out agency vs SMM vs freelancer with no extra UI.
+      var seg = '', ind = '', team = '';
+      var reqEmail = (data.email || '').toString().trim().toLowerCase();
+      if (reqEmail) {
+        var signups = ss.getSheetByName('Signups');
+        if (signups && signups.getLastRow() > 1) {
+          var rows = signups.getDataRange().getValues();
+          // Signups columns: Timestamp, Name, Email(2), Company & Role(3), Industry(4), Team Size(5)
+          for (var i = 1; i < rows.length; i++) {
+            if (String(rows[i][2]).trim().toLowerCase() === reqEmail) {
+              seg = rows[i][3] || ''; ind = rows[i][4] || ''; team = rows[i][5] || '';
+              break;
+            }
+          }
+        }
+      }
+      br.appendRow([
         data.timestamp || new Date().toISOString(),
         data.brand || '',
         (data.market || '').toString().toUpperCase(),
-        data.known === 'yes' ? 'Yes' : 'No — add',
-        data.category || '',
-        data.email || ''
+        data.email || '',
+        seg, ind, team
       ]);
       return ContentService
         .createTextOutput(JSON.stringify({ status: 'ok', logged: true }))

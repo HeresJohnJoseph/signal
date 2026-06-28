@@ -806,32 +806,75 @@ function SocialAuditPanel({ show, onClose, cards, apiKey, year }) {
 }
 
 /* ---------- Sidebar control panel ---------- */
-/* Free-text brand search — known brands jump to their context, unknown brands
-   trigger live AI competitor discovery (with an on-screen disclaimer). */
-function BrandSearch({ onBrandSearch, searching }) {
-  const [q, setQ] = _useS("");
-  const submit = () => { const v = q.trim(); if (v && onBrandSearch) onBrandSearch(v); };
+/* Brand dropdown — lists every tracked brand (SA) or category (US/UK).
+   Selecting pulls existing competitor links from the sheet — no live AI
+   discovery, so it's token-light compared with open-ended search. */
+function BrandDropdown({ brandSel, marketSel, setBrandSel }) {
+  const opts = marketSel === "sa"
+    ? Object.entries(BRAND_CATEGORIES).map(([catKey, catMeta]) => {
+        const brandsInCat = Object.values(BRANDS).filter(b => b.category === catKey && b.key !== CUSTOM_BRAND_KEY);
+        if (!brandsInCat.length) return null;
+        return (
+          <optgroup key={catKey} label={catMeta.label}>
+            {brandsInCat.map(b => <option key={b.key} value={b.key}>{b.name}</option>)}
+          </optgroup>
+        );
+      })
+    : Object.entries(BRAND_CATEGORIES).map(([catKey, catMeta]) => {
+        const rep = Object.values(BRANDS).find(b => b.category === catKey);
+        return rep ? <option key={rep.key} value={rep.key}>{catMeta.label}</option> : null;
+      });
   return (
-    <div className="brand-search">
-      <input
-        className="brand-search-input"
-        type="text"
-        value={q}
-        placeholder="Search any brand…"
-        onChange={(e) => setQ(e.target.value)}
-        onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
-        disabled={searching}
-        aria-label="Search any brand" />
-      <button className={"brand-search-btn" + (searching ? " busy" : "")} onClick={submit} disabled={searching || !q.trim()} title="Search">
-        {searching ? "…" : "⌕"}
-      </button>
+    <select className="sb-select brand-dropdown" value={brandSel}
+            onChange={(e) => setBrandSel(e.target.value)}
+            aria-label={marketSel === "sa" ? "Select brand" : "Select category"}>
+      {opts}
+    </select>
+  );
+}
+
+/* Zero-token demand capture — "Don't see your brand? Request it."
+   Logs interest only (NO AI call); confirms inline. Powers the demand
+   framework: what brands agencies/SMMs/freelancers want that we don't have. */
+function BrandRequest({ onRequestBrand }) {
+  const [q, setQ] = _useS("");
+  const [msg, setMsg] = _useS(null);
+  const submit = () => {
+    const v = q.trim();
+    if (!v || !onRequestBrand) return;
+    const r = onRequestBrand(v);
+    if (!r || !r.ok) return;
+    if (r.existing) {
+      setMsg({ type: "info", text: `${r.name} is already available — pick it from the list above.` });
+    } else {
+      setMsg({ type: "ok", text: `Thanks — “${v}” is logged. We prioritise the most-requested brands.` });
+      setQ("");
+    }
+  };
+  return (
+    <div className="brand-request">
+      <div className="brand-request-label">Don’t see your brand?</div>
+      <div className="brand-request-row">
+        <input
+          className="brand-request-input"
+          type="text"
+          value={q}
+          placeholder="Request a brand…"
+          onChange={(e) => { setQ(e.target.value); if (msg) setMsg(null); }}
+          onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
+          aria-label="Request a brand" />
+        <button className="brand-request-btn" onClick={submit} disabled={!q.trim()} title="Request brand">
+          Request
+        </button>
+      </div>
+      {msg && <div className={"brand-request-msg " + msg.type}>{msg.text}</div>}
     </div>
   );
 }
 
 function Sidebar(props) {
   const { marketSel = "sa", setMarket,
-          brandSel, setBrandSel, onBrandSearch, searching,
+          brandSel, setBrandSel, onRequestBrand,
           month, setMonth, year, setYear, runState, onRun,
           colors, onGenerate, busy, canExport,
           signalKeyword, setSignalKeyword,
@@ -895,27 +938,8 @@ function Sidebar(props) {
 
         <div className="sb-block">
           <div className="step-eyebrow"><span className="num">02</span><span className="lbl">{marketSel === "sa" ? "Select Brand" : "Select Category"}</span></div>
-          <BrandSearch onBrandSearch={onBrandSearch} searching={searching} />
-          <div className="brand-list">
-            {marketSel === "sa"
-              ? Object.entries(BRAND_CATEGORIES).map(([catKey, catMeta]) => {
-                  const brandsInCat = Object.values(BRANDS).filter(b => b.category === catKey);
-                  if (!brandsInCat.length) return null;
-                  return (
-                    <div key={catKey} className="brand-group">
-                      <div className="brand-group-label">{catMeta.label}</div>
-                      {brandsInCat.map(b => brandRow(b.key, b.name, colors[b.key] || b.color))}
-                    </div>
-                  );
-                })
-              : Object.entries(BRAND_CATEGORIES).map(([catKey, catMeta]) => {
-                  /* US/UK: one entry per category (tabs are category-level) */
-                  const rep = Object.values(BRANDS).find(b => b.category === catKey);
-                  if (!rep) return null;
-                  return brandRow(rep.key, catMeta.label, catMeta.color || colors[rep.key]);
-                })
-            }
-          </div>
+          <BrandDropdown brandSel={brandSel} marketSel={marketSel} setBrandSel={setBrandSel} />
+          <BrandRequest onRequestBrand={onRequestBrand} />
         </div>
 
         <div className="sb-block">

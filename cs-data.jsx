@@ -703,21 +703,22 @@ async function searchBrandCompetitors(name, market) {
   return { competitors: out.competitors.slice(0, 4), category };
 }
 
-/* Apps Script web app (same endpoint signups use) — log every brand search so
-   John knows what was searched and which brands to add to the dataset. */
+/* Apps Script web app (same endpoint signups use). */
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxFSOZ7VSoTWRLdSzfxe9rrImyEGell3VS42JX839bxLyEUF-NEKTrXkQJeZ6rSVXQWrw/exec";
-function logBrandSearch(brand, market, known, category) {
+
+/* Zero-token brand request — pure demand capture, NO Gemini call. Logs the
+   brand to the "Brand Requests" tab so John can measure latent demand (volume,
+   breadth, velocity, by market + segment) and decide what to add next. */
+function requestBrand(brand, market) {
   try {
     /* text/plain avoids a CORS preflight Apps Script can't answer; fire-and-forget */
     fetch(APPS_SCRIPT_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify({
-        type: "brand_search",
+        type: "brand_request",
         brand: String(brand || "").trim(),
         market: market || "sa",
-        known: known ? "yes" : "no",
-        category: category || "",
         email: getUserEmail() || "",
         timestamp: new Date().toISOString(),
       }),
@@ -1772,6 +1773,6 @@ Object.assign(window, {
   loadSheetCompetitors, invalidateSheetCache,
   callGemini, parseChartData, parseInsight,
   analyzeWindow, suggestCompetitors, buildPrompt, generatePDF, generateReport, generatePPT,
-  searchBrandCompetitors, findKnownBrand, registerCustomBrand, logBrandSearch,
+  searchBrandCompetitors, findKnownBrand, registerCustomBrand, requestBrand,
   CUSTOM_BRAND_KEY, BRAND_CATEGORIES, contextLabel,
 });
