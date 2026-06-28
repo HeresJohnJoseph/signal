@@ -108,6 +108,7 @@ function App() {
         setCards(demo);
         setRunState("ready");
         if (window.posthog) window.posthog.capture('run_snapshot', { brand: brandSel, competitor_count: demo.length, month, year, demo: true });
+        if (window.posthog) window.posthog.capture('ran_snapshot', { market: marketSel, category: BRANDS[brandSel] && BRANDS[brandSel].category, brand: brandLabel, demo: true });
       } else {
         setFetchErr(`No demo data for ${brandLabel} yet — try QSR or an Alcohol brand.`);
         setRunState("idle");
@@ -120,6 +121,7 @@ function App() {
       setCards(fetched);
       setRunState("ready");
       if (window.posthog) window.posthog.capture('run_snapshot', { brand: brandSel, competitor_count: fetched.length, month, year });
+      if (window.posthog) window.posthog.capture('ran_snapshot', { market: marketSel, category: BRANDS[brandSel] && BRANDS[brandSel].category, brand: brandLabel });
 
       /* Auto-analyze every competitor sequentially with a small stagger */
       if (fetched.length > 0 && !aiUnavailable) {
@@ -265,7 +267,7 @@ function App() {
   const stateForExport = () => ({ brandLabel, brandColor: ctxColor, month, year, cards, signalKeyword });
   const onGenerate = async () => {
     setBusy(true);
-    try { await generatePDF(stateForExport()); if (window.posthog) window.posthog.capture('export_pdf', { brand: brandSel }); } catch (e) { console.error(e); }
+    try { await generatePDF(stateForExport()); if (window.posthog) { window.posthog.capture('export_pdf', { brand: brandSel }); window.posthog.capture('exported', { format: 'pdf', brand: brandSel }); } } catch (e) { console.error(e); }
     setBusy(false);
   };
   const [reportBusy, setReportBusy] = useState(false);
@@ -274,12 +276,12 @@ function App() {
   const [showAudit, setShowAudit] = useState(false);
   const onGenerateReport = async () => {
     setReportBusy(true);
-    try { await generateReport(stateForExport()); } catch (e) { console.error(e); }
+    try { await generateReport(stateForExport()); if (window.posthog) window.posthog.capture('exported', { format: 'report', brand: brandSel }); } catch (e) { console.error(e); }
     setReportBusy(false);
   };
   const onGeneratePPT = async () => {
     setPptBusy(true);
-    try { await generatePPT(stateForExport()); if (window.posthog) window.posthog.capture('export_ppt', { brand: brandSel }); } catch (e) { console.error(e); }
+    try { await generatePPT(stateForExport()); if (window.posthog) { window.posthog.capture('export_ppt', { brand: brandSel }); window.posthog.capture('exported', { format: 'powerpoint', brand: brandSel }); } } catch (e) { console.error(e); }
     setPptBusy(false);
   };
 

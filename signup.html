@@ -11,6 +11,16 @@
 
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 
+<!-- Analytics (same PostHog project as the app) -->
+<script>
+  !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+" (stub)"},o="capture identify alias people.set people.set_once set_config register register_once unregister opt_out_capturing has_opted_out_capturing opt_in_capturing reset isFeatureEnabled onFeatureFlags getFeatureFlag getFeatureFlagPayload reloadFeatureFlags group updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures getActiveMatchingSurveys getSurveys onSessionId".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+  posthog.init('phc_ukHYgfaQGNSfqxpcKJVGEF9Phzw4QaZq3vNNajYY8RCn', {
+    api_host: 'https://us.i.posthog.com',
+    person_profiles: 'identified_only',
+    capture_pageview: true,
+  });
+</script>
+
 <style>
   :root {
     --bg:        #0C0F16;
@@ -347,7 +357,13 @@
     try {
       var payload = JSON.parse(atob(response.credential.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
       googleUser = { name: payload.name || '', email: payload.email || '', picture: payload.picture || '' };
-      if (googleUser.email) localStorage.setItem('signal_user_email', googleUser.email);
+      if (googleUser.email) {
+        localStorage.setItem('signal_user_email', googleUser.email);
+        if (googleUser.name) localStorage.setItem('signal_user_name', googleUser.name);
+        if (window.posthog) window.posthog.identify(googleUser.email, googleUser.name
+          ? { email: googleUser.email, name: googleUser.name }
+          : { email: googleUser.email });
+      }
       document.getElementById('p-pic').src = googleUser.picture;
       document.getElementById('p-name').textContent = googleUser.name;
       document.getElementById('p-email').textContent = googleUser.email;
@@ -429,6 +445,9 @@
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error('HTTP ' + res.status);
+      /* New signup row written → fire signed_up once (this submit path is only
+         reached by new users; returning users are redirected before reaching it). */
+      if (window.posthog) window.posthog.capture('signed_up', { email: payload.email });
       /* Request captured. Gate on the beta allowlist — paying Pro users skip it. */
       var status = await checkAllowlist(payload.email);
       if (status === 'deny') {
