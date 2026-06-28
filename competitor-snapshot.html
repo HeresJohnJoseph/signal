@@ -41,6 +41,13 @@
     const storedRef = localStorage.getItem('signal_ref');
     if (storedRef) posthog.register({ referral_source: storedRef });
   }
+
+  /* Identify the signed-in user (email stored at Google sign-in in signup.html)
+     so the `email` person property exists in PostHog — required for the
+     internal-user filter (excludes the founder's own activity) and per-tester
+     analysis. Fires on every app load for a registered user. */
+  const signalEmail = localStorage.getItem('signal_user_email');
+  if (signalEmail) posthog.identify(signalEmail, { email: signalEmail });
 </script>
 </head>
 <body>
