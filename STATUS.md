@@ -35,8 +35,9 @@ founding-tester cap). Payment (Stripe "Pro") is built but not yet switched on.
    creative-effectiveness score.
 3. **Export** the result as a PowerPoint deck, a slides PDF, or an intelligence
    report — all on Signal's dark brand design.
-4. **NEW:** Search *any* brand by name — if it's not in our data, Signal
-   discovers its competitors live and flags it as AI-generated.
+4. **NEW:** Pick from a dropdown of all tracked brands, and if a brand isn't
+   there yet, **request it** — a zero-cost way for us to measure which brands
+   agencies/freelancers actually want (the demand framework).
 
 **Who it's for:** freelancers and small agencies who need a polished competitor
 review fast. The business model is closest to "productised consulting" delivered
@@ -99,44 +100,70 @@ The build ran from **9 June 2026** to today across ~60 commits. Grouped by phase
 - Fixed a dead export button and the competitor-suggestion feature.
 - Beta UX: distinguish "daily quota used up" from a short per-minute spike.
 
-### Phase 6 — Deck quality, growth loop, brand search (27 June — today)
+### Phase 6 — Deck quality, growth loop, demand capture (27 June — today)
 - **Rebuilt the PowerPoint export** on the formula of John's flagship VML
   "Bernini" competitor deck — editorial headlines, a competitor leaderboard with
   a score heatmap, and a head-to-head comparison table.
 - **Added a "Made with Signal" watermark + referral link** to every exported
   deck/PDF — every forwarded file is now a growth hook back to the app.
-- **Added search-by-brand**: type any brand; if it's not in our data, Signal
-  discovers its competitors live, shows a disclaimer, and logs the search so the
-  dataset can grow.
+- **Brand dropdown + "Request a brand"**: a token-light dropdown of all tracked
+  brands, plus a zero-cost request box for brands we don't have yet. Requests are
+  logged (with the requester's segment) so we can measure latent demand — which
+  brands agencies/social-media managers/freelancers most want — and decide what
+  to add next. (Briefly trialled a live AI brand-search; replaced with the
+  dropdown + request model to control AI token cost.)
 
 ---
 
 ## 5. What's OUTSTANDING (needs action)
 
-### A. John needs to push the latest work live (2 min)
-The last **3 commits are committed but not yet pushed** (the new PowerPoint deck,
-the watermark/referral, and search-by-brand). Pushing auto-deploys to the live
-site. Until pushed, testers see the previous version.
-→ *Action: John (or a developer) runs `git push`. Search-by-brand for unknown
-brands needs this to work for testers.*
+### A. Latest code is pushed & live ✅
+All build work through 27 June is pushed to `main` and auto-deployed to the live
+site (verified serving `cs-data.jsx?v=20260627f`; `/api/health` returns
+`keyConfigured:true`). Nothing to do here.
 
-### B. Operational steps to fully open the beta (John only)
-These are documented in detail in **[BETA-SETUP.md](BETA-SETUP.md)**:
-1. **Add tester emails** to the `Allowlist` tab of the tracker Google Sheet.
-2. **Redeploy the Apps Script** once (Extensions → Apps Script → Deploy → new
-   version) — this enables signups landing in the sheet, the Pro tier, and the
-   new **"Brand Requests"** log (what brands testers are searching for).
-3. Share the link with testers (they sign in with Google; if allowlisted, in).
+### ⭐ B. EA TASK — Republish the Google Sheet script (one-time, ~5 min)
 
-### C. Optional — switch on paid Pro (to take money)
+**Why:** the tracker Google Sheet has a small script attached to it that writes
+new rows when someone signs up or **requests a brand**. The script's
+instructions were just updated (to capture brand requests + the requester's
+segment), but Google only runs the *last published version*. Until it's
+republished, brand requests are still recorded in our analytics (PostHog) but
+**won't appear in the sheet**. This step fixes that. It's safe and reversible —
+the web address stays the same.
+
+**Steps:**
+1. Open the tracker **Google Sheet** (the Competitor Social Media Tracker — ask
+   John for the link if you don't have it).
+2. Top menu → **Extensions → Apps Script**. A code editor opens in a new tab.
+3. Select all the code there and delete it. Open the file
+   **[`sheet-sync.gs`](sheet-sync.gs)** from this repo, copy its entire contents,
+   and paste them in. Click the **save** icon (💾).
+4. Top-right → **Deploy → Manage deployments**.
+5. Click the **pencil (Edit)** icon on the existing deployment.
+6. Under **Version**, choose **New version**, then click **Deploy**.
+7. If asked to authorise, approve with John's Google account.
+
+**How to check it worked:** in the live app, type a made-up brand into
+"Request a brand" and click Request. Within a few seconds a new row should
+appear in a **"Brand Requests"** tab of the sheet (Timestamp · Brand · Market ·
+Requested by · Segment · Industry · Team Size). If it does, you're done.
+
+### C. Operational steps to fully open the beta (John)
+1. **Add tester emails** to the `Allowlist` tab of the tracker Google Sheet
+   (one per row, column A). Listed = they're in; removed = they're out.
+2. Share the link with testers (they sign in with Google; if allowlisted, in).
+3. Full runbook with verification commands: **[BETA-SETUP.md](BETA-SETUP.md)**.
+
+### D. Optional — switch on paid Pro (to take money)
 Stripe is built but dormant. To go live: create a Stripe payment link + webhook
 and add one environment variable. Steps are in BETA-SETUP.md. Test in Stripe's
 test mode first.
 
-### D. Watch-items (not urgent, but real)
+### E. Watch-items (not urgent, but real)
 - **Shared AI quota:** all testers share one free Google AI allowance
   (~1,500 calls/day). Fine for the beta; **move to a paid AI plan before any
-  big push** (e.g. LinkedIn). The new "search any brand" feature increases usage.
+  big push** (e.g. LinkedIn).
 - **Product name:** "Signal" is strong but very crowded (clashes with the Signal
   messenger app and many martech tools). Worth a naming review before scaling
   paid — flagged, not urgent.
