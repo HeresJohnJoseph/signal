@@ -122,32 +122,39 @@ All build work through 27 June is pushed to `main` and auto-deployed to the live
 site (verified serving `cs-data.jsx?v=20260627f`; `/api/health` returns
 `keyConfigured:true`). Nothing to do here.
 
-### ⭐ B. EA TASK — Republish the Google Sheet script (one-time, ~5 min)
+### ⭐ B. EA TASK — Republish the Apps Script (one-time, ~5 min, do with John)
 
-**Why:** the tracker Google Sheet has a small script attached to it that writes
-new rows when someone signs up or **requests a brand**. The script's
-instructions were just updated (to capture brand requests + the requester's
-segment), but Google only runs the *last published version*. Until it's
-republished, brand requests are still recorded in our analytics (PostHog) but
-**won't appear in the sheet**. This step fixes that. It's safe and reversible —
-the web address stays the same.
+**Why:** a small Google Apps Script writes a row whenever someone signs up or
+**requests a brand**. The updated code (now in [`sheet-sync.gs`](sheet-sync.gs))
+adds brand-request capture, but Google only runs the *last published version*,
+so it must be republished. Until then brand requests are still safely recorded
+in **PostHog** — so this is a convenience, not urgent. **No data is lost by
+waiting.**
+
+**⚠️ Gotchas we discovered (read first — easy to get wrong):**
+- The tracker is an **uploaded .xlsx**, so it has **no Extensions → Apps Script
+  menu**. The code lives in a **separate** project.
+- There are **two** web-app deployments. The app only calls the one whose URL
+  starts **`AKfycbxFSOZ7…`** — you must update *that* one, or nothing changes.
+- The live code uses `getActiveSpreadsheet()` (bound to a native Google Sheet,
+  not the .xlsx). `sheet-sync.gs` already matches this — paste it as-is; do not
+  "fix" it to open the .xlsx by ID.
 
 **Steps:**
-1. Open the tracker **Google Sheet** (the Competitor Social Media Tracker — ask
-   John for the link if you don't have it).
-2. Top menu → **Extensions → Apps Script**. A code editor opens in a new tab.
-3. Select all the code there and delete it. Open the file
-   **[`sheet-sync.gs`](sheet-sync.gs)** from this repo, copy its entire contents,
-   and paste them in. Click the **save** icon (💾).
-4. Top-right → **Deploy → Manage deployments**.
-5. Click the **pencil (Edit)** icon on the existing deployment.
-6. Under **Version**, choose **New version**, then click **Deploy**.
-7. If asked to authorise, approve with John's Google account.
+1. Go to **https://script.google.com/home** (signed in as John) → open
+   **"Signal Signups Backend"**.
+2. In `Code.gs`: select all (⌘A) → delete → paste the entire contents of
+   **[`sheet-sync.gs`](sheet-sync.gs)** → save (⌘S).
+3. Top-right → **Deploy → Manage deployments**.
+4. In the **Active** list, click the deployment whose Deployment ID / Web-app
+   URL starts **`AKfycbxFSOZ7…`** (click each to check — there are two).
+5. Click the **pencil (Edit)** icon → **Version: New version** → **Deploy**.
+6. Approve any Google authorisation prompt with John's account.
 
-**How to check it worked:** in the live app, type a made-up brand into
-"Request a brand" and click Request. Within a few seconds a new row should
-appear in a **"Brand Requests"** tab of the sheet (Timestamp · Brand · Market ·
-Requested by · Segment · Industry · Team Size). If it does, you're done.
+**How to check it worked:** in the live app, request a made-up brand. Within a
+few seconds a new **"Brand Requests"** tab row should appear in the Google Sheet
+that the script is bound to (Timestamp · Brand · Market · Requested by · Segment
+· Industry · Team Size). Also confirmable in PostHog under `brand_requested`.
 
 ### C. Operational steps to fully open the beta (John)
 1. **Add tester emails** to the `Allowlist` tab of the tracker Google Sheet
