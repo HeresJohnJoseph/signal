@@ -1,6 +1,6 @@
 /* ============================================================
    DATA + AI + PDF — Brand Window template
-   John Joseph · Strategy Intelligence
+   Signal · Competitor Intelligence
    Source: Competitor Social Media Tracker (Google Sheet)
    ============================================================ */
 
@@ -791,7 +791,7 @@ function buildPrompt(state) {
   const lines = [];
   lines.push(`Build a competitor "brand window" deck for ${state.brandLabel} — ${period}. One landscape page per competitor.`);
   lines.push(``);
-  lines.push(`CONTEXT: Monthly social intelligence by John Joseph for the ${state.brandLabel} brand team. Light-blue field, white cards, navy Playfair headings, coral accents. Source: Competitor Social Media Tracker.`);
+  lines.push(`CONTEXT: Monthly social intelligence by Signal for the ${state.brandLabel} brand team. Light-blue field, white cards, navy Playfair headings, coral accents. Source: Competitor Social Media Tracker.`);
   lines.push(``);
   state.cards.forEach((c, i) => {
     const pg = String(i + 1).padStart(2, "0");
@@ -934,7 +934,7 @@ async function generatePDF(state) {
 
     // footer
     doc.setFont("helvetica", "bold"); doc.setFontSize(12); doc.setTextColor(...text2);
-    doc.text("J O H N   J O S E P H", PW / 2, PH - 38, { align: "center" });
+    doc.text("S I G N A L", PW / 2, PH - 38, { align: "center" });
     if (WM) {
       doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(...text3);
       doc.textWithLink(SIGNAL_SHARE_CTA, (PW - doc.getTextWidth(SIGNAL_SHARE_CTA)) / 2, PH - 26, { url: SIGNAL_SHARE_URL });
@@ -1052,7 +1052,7 @@ async function generateReport(state) {
   }
 
   doc.setFont("helvetica","normal"); doc.setFontSize(10); doc.setTextColor(...text2);
-  doc.text("Prepared by John Joseph  ·  Strategy Intelligence  ·  VML", PAD, PH - 54);
+  doc.text("Prepared with Signal  ·  Competitor Intelligence", PAD, PH - 54);
   doc.setFontSize(9); doc.setTextColor(...text3);
   doc.text("CONFIDENTIAL — FOR INTERNAL STRATEGIC USE ONLY", PAD, PH - 37);
   if (WM) {
@@ -1397,7 +1397,7 @@ async function generatePPT(state) {
   const MONO  = "Courier New";
 
   pptx.layout = "LAYOUT_WIDE"; /* 13.33 × 7.5 in */
-  pptx.author  = "John Joseph · Strategy Intelligence";
+  pptx.author  = "Signal";
   pptx.company = "Brand Window";
   pptx.subject = `${brandLabel} Brand Window — ${monthName} ${year}`;
   pptx.title   = `${brandLabel} Competitor Intelligence`;

@@ -326,7 +326,7 @@ function WindowCanvas({ card, idx, total, brandLabel, year, ids, onSetPost, onLo
             ))}
           </div>
         ) : (
-          <div className="wp-foot-center">John Joseph</div>
+          <div className="wp-foot-center">Signal</div>
         )}
         <div className="wp-foot-right">{brandLabel} Brand<br/>Window {year}</div>
       </div>
@@ -917,7 +917,7 @@ function Sidebar(props) {
           <div className="bm-icon">◈</div>
           <div>
             <div className="wm">Signal</div>
-            <div className="sub">John Joseph · Intelligence</div>
+            <div className="sub">Competitor Intelligence</div>
           </div>
         </div>
         <div className="sb-rule"></div>
@@ -1071,7 +1071,7 @@ function SetupScreen({ onSave }) {
       <div className="setup-card">
         <div className="setup-brandmark">◈</div>
         <h1 className="setup-title">Signal</h1>
-        <p className="setup-sub">Brand & Competitor Intelligence · VML South Africa</p>
+        <p className="setup-sub">Brand & Competitor Intelligence</p>
         <div className="setup-divider" />
         <p className="setup-body">
           Signal uses Google's Gemini AI to research competitors in real time. You need a free API key to activate the intelligence engine — it takes 30 seconds to get one and you'll only ever need to do this once.

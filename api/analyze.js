@@ -42,7 +42,7 @@ function buildAnalyzePrompt(p) {
     `    {"platform":"${pl}","role":"Primary|Light|Inactive","comment":"<=4 words"}`).join(",\n");
   const freqRow = socialPlats.map((pl) => `"${pl}":<est. posts/month>`).join(",");
 
-  return `You are a senior brand strategist at John Joseph building a monthly competitor intelligence report for the ${mkt} market (category: ${clientLabel}).
+  return `You are a senior brand strategist at Signal building a monthly competitor intelligence report for the ${mkt} market (category: ${clientLabel}).
 
 Use Google Search to research the competitor brand "${p.name}" in the ${mkt} market.
 ${handles ? `Search these channels for recent activity:\n${handles}` : ""}

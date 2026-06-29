@@ -363,7 +363,7 @@ function App() {
         <div className="stage-inner">
           <div className="stage-head">
             <div>
-              <div className="sh-eyebrow">John Joseph · Strategy Intelligence · {MARKETS[marketSel] ? MARKETS[marketSel].label : "South Africa"}</div>
+              <div className="sh-eyebrow">Signal · Competitor Intelligence · {MARKETS[marketSel] ? MARKETS[marketSel].label : "South Africa"}</div>
               <div className="sh-title">{brandLabel} · Signal</div>
             </div>
             <div className="sh-meta">
