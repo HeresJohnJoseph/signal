@@ -879,7 +879,7 @@ function Sidebar(props) {
           colors, onGenerate, busy, canExport,
           signalKeyword, setSignalKeyword,
           onGenerateReport, reportBusy, canReport,
-          onGeneratePPT, pptBusy,
+          onGeneratePPT, pptBusy, isFreeTier,
           onShowMethodology, geminiCalls = 0 } = props;
   /* Signal Pro — badge when paid, "Go Pro" CTA otherwise. */
   const [isPro, setIsPro] = _useS(getProStatus());
@@ -983,11 +983,11 @@ function Sidebar(props) {
         </button>
 
         <button className={"btn-report " + (reportBusy ? "busy" : "")} onClick={onGenerateReport} disabled={!canReport || reportBusy}>
-          <span className="rep-ic">▤</span>{reportBusy ? "Building report…" : "Export Intelligence Report"}
+          <span className="rep-ic">▤</span>{reportBusy ? "Building report…" : "Export Intelligence Report"}{isFreeTier && <span className="pro-lock">PRO</span>}
         </button>
 
         <button className={"btn-ppt " + (pptBusy ? "busy" : "")} onClick={onGeneratePPT} disabled={!canExport || pptBusy}>
-          <span className="ppt-ic">⬛</span>{pptBusy ? "Building deck…" : "Export PowerPoint Deck"}
+          <span className="ppt-ic">⬛</span>{pptBusy ? "Building deck…" : "Export PowerPoint Deck"}{isFreeTier && <span className="pro-lock">PRO</span>}
         </button>
 
         <button className="btn-audit" onClick={props.onShowAudit}>

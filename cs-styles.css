@@ -109,6 +109,41 @@ html, body {
 }
 .sb-block { margin-bottom: 24px; }
 
+/* ── Tier gating: PRO lock badge + paywall ── */
+.pro-lock {
+  margin-left: 8px; padding: 1px 6px; border-radius: 5px;
+  font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: 1px;
+  background: var(--accent); color: #0C0F16; vertical-align: middle;
+}
+.paywall-overlay {
+  position: fixed; inset: 0; z-index: 10000;
+  background: rgba(8,10,15,0.72); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+}
+.paywall-card {
+  max-width: 420px; width: 100%;
+  background: var(--card); border: 1px solid var(--card-2);
+  border-radius: 16px; padding: 26px 26px 22px;
+  box-shadow: 0 24px 70px rgba(0,0,0,0.55);
+}
+.paywall-card .pw-kicker { font-family: var(--mono); font-size: 10px; letter-spacing: 2px; color: var(--accent); font-weight: 700; }
+.paywall-card h3 { margin: 10px 0 8px; font-family: var(--serif, "Playfair Display", serif); font-size: 21px; color: var(--text-1); line-height: 1.25; }
+.paywall-card p { margin: 0 0 18px; font-size: 13.5px; line-height: 1.6; color: var(--text-2); }
+.paywall-card p strong { color: var(--text-1); }
+.pw-actions { display: flex; gap: 10px; align-items: center; }
+.pw-upgrade {
+  flex: 1; text-align: center; text-decoration: none;
+  padding: 11px 14px; border-radius: 10px;
+  background: var(--accent); color: #0C0F16; font-weight: 700; font-size: 14px;
+  transition: filter .12s;
+}
+.pw-upgrade:hover { filter: brightness(1.08); }
+.pw-dismiss {
+  padding: 11px 14px; border-radius: 10px; cursor: pointer;
+  background: transparent; border: 1px solid var(--card-2); color: var(--text-2); font-size: 13px;
+}
+.pw-dismiss:hover { color: var(--text-1); border-color: var(--text-3); }
+
 /* ── Brand dropdown (token-light selector — sheet data, no live AI) ── */
 .brand-dropdown { width: 100%; }
 

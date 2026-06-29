@@ -397,6 +397,40 @@ async function checkProRemote(email) {
     return emails.includes(email.toLowerCase().trim());
   } catch { return false; }
 }
+/* ---- Tiered access (Free / Solo / Agency) ----
+   Source of truth: a "Tier" column in the Allowlist tab (values
+   free|solo|agency; default free). Returns { tier, gating }:
+   - gating:false when the sheet has NO "Tier" column yet → the app stays fully
+     open (legacy beta), so introducing tiers is opt-in and never silently
+     downgrades current testers. Add the column to switch enforcement on. */
+let _tierCache = null;
+async function getUserTier(email) {
+  const key = (email || "").toLowerCase().trim();
+  if (_tierCache && _tierCache.key === key) return _tierCache.result;
+  const open = { tier: "agency", gating: false };       // fail open
+  try {
+    const r = await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Allowlist`);
+    if (!r.ok) return open;
+    const rows = parseCSV(await r.text());
+    if (!rows.length) return open;
+    const header = rows[0].map(h => String(h).trim().toLowerCase());
+    const tierIdx = header.indexOf("tier");
+    if (tierIdx === -1) return open;                     // no Tier column → don't gate
+    const emailIdx = header.indexOf("email") >= 0 ? header.indexOf("email") : 0;
+    let tier = "free";
+    for (let i = 1; i < rows.length; i++) {
+      if (String(rows[i][emailIdx] || "").toLowerCase().trim() === key) {
+        const t = String(rows[i][tierIdx] || "").toLowerCase().trim();
+        tier = (t === "solo" || t === "agency") ? t : "free";
+        break;
+      }
+    }
+    const result = { tier, gating: true };
+    _tierCache = { key, result };
+    return result;
+  } catch { return open; }
+}
+
 async function getStripeProUrl() { const c = await fetchSharedConfig(); return (c && c.stripe_pro_url) || ""; }
 /* Stripe Payment Link with the user's email prefilled + tagged for the webhook. */
 function proCheckoutLink(base, email) {
@@ -777,6 +811,7 @@ function buildPrompt(state) {
 async function generatePDF(state) {
   const { jsPDF } = window.jspdf;
   const PW = 1380, PH = 781;
+  const WM = state.watermark !== false;   /* paid tiers pass watermark:false → no referral line */
   const doc = new jsPDF({ unit: "pt", format: [PW, PH], orientation: "landscape" });
 
   /* ── Signal dark CI palette (mirrors cs-styles.css :root + the PPT deck) ── */
@@ -900,8 +935,10 @@ async function generatePDF(state) {
     // footer
     doc.setFont("helvetica", "bold"); doc.setFontSize(12); doc.setTextColor(...text2);
     doc.text("J O H N   J O S E P H", PW / 2, PH - 38, { align: "center" });
-    doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(...text3);
-    doc.textWithLink(SIGNAL_SHARE_CTA, (PW - doc.getTextWidth(SIGNAL_SHARE_CTA)) / 2, PH - 26, { url: SIGNAL_SHARE_URL });
+    if (WM) {
+      doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(...text3);
+      doc.textWithLink(SIGNAL_SHARE_CTA, (PW - doc.getTextWidth(SIGNAL_SHARE_CTA)) / 2, PH - 26, { url: SIGNAL_SHARE_URL });
+    }
     doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.setTextColor(...accent);
     doc.text(`${state.brandLabel.toUpperCase()} BRAND`, PW - PAD, PH - 42, { align: "right" });
     doc.text(`WINDOW ${state.year}`, PW - PAD, PH - 30, { align: "right" });
@@ -953,6 +990,7 @@ function dashedRoundRect(doc, x, y, w, h, r) {
 async function generateReport(state) {
   const { jsPDF } = window.jspdf;
   const PW = 595, PH = 842;
+  const WM = state.watermark !== false;   /* paid tiers pass watermark:false → no referral line */
   const doc = new jsPDF({ unit: "pt", format: "a4", orientation: "portrait" });
 
   /* ── Signal dark CI palette (mirrors cs-styles.css :root + the deck) ── */
@@ -1017,8 +1055,10 @@ async function generateReport(state) {
   doc.text("Prepared by John Joseph  ·  Strategy Intelligence  ·  VML", PAD, PH - 54);
   doc.setFontSize(9); doc.setTextColor(...text3);
   doc.text("CONFIDENTIAL — FOR INTERNAL STRATEGIC USE ONLY", PAD, PH - 37);
-  doc.setFontSize(8);
-  doc.textWithLink(SIGNAL_SHARE_CTA, PAD, PH - 22, { url: SIGNAL_SHARE_URL });
+  if (WM) {
+    doc.setFontSize(8);
+    doc.textWithLink(SIGNAL_SHARE_CTA, PAD, PH - 22, { url: SIGNAL_SHARE_URL });
+  }
 
   /* ── PAGE 2: CATEGORY OVERVIEW ── */
   doc.addPage();
@@ -1274,8 +1314,11 @@ async function generateReport(state) {
     }
 
     /* footer */
-    doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...text3);
-    doc.textWithLink(SIGNAL_SHARE_CTA, (PW - doc.getTextWidth(SIGNAL_SHARE_CTA))/2, PH-34, { url: SIGNAL_SHARE_URL });
+    doc.setFont("helvetica","normal"); doc.setTextColor(...text3);
+    if (WM) {
+      doc.setFontSize(8);
+      doc.textWithLink(SIGNAL_SHARE_CTA, (PW - doc.getTextWidth(SIGNAL_SHARE_CTA))/2, PH-34, { url: SIGNAL_SHARE_URL });
+    }
     doc.setFontSize(8.5);
     doc.text(card_.name + " · " + period, PAD, PH-22);
     doc.text(String(idx+3), PW/2, PH-22, { align:"center" });
@@ -1330,6 +1373,8 @@ async function generateReport(state) {
    ============================================================ */
 async function generatePPT(state) {
   const { brandLabel, brandColor, month, year, cards, signalKeyword } = state;
+  /* Watermark on by default (free/legacy); paid tiers pass watermark:false → clean deck. */
+  const WM = state.watermark !== false;
   const monthName = MONTHS[month] || "";
   const pptx = new PptxGenJS();
 
@@ -1394,18 +1439,24 @@ async function generatePPT(state) {
     );
   };
 
-  /* ── Helper: faint diagonal SIGNAL watermark (open slides only) ── */
+  /* ── Helper: faint diagonal SIGNAL watermark (free/legacy decks only) ── */
   const watermark = (slide) => {
+    if (!WM) return;
     slide.addText("SIGNAL", { x:-1, y:2.4, w:W+2, h:2.6, fontSize:150, bold:true, color:"141A28", align:"center", fontFace:SERIF, rotate:340 });
   };
 
-  /* ── Helper: footer — credit watermark + referral link, on every slide ── */
+  /* ── Helper: footer — referral credit on free/legacy decks; clean on paid ── */
   const footer = (slide, pageNo) => {
-    slide.addText(
-      [ { text: "Made with ", options:{ color:TEXT3 } },
-        { text: "Signal", options:{ color:ACCENT, bold:true } },
-        { text: " · " + SIGNAL_SHARE_HOST, options:{ color:TEXT3 } } ],
-      { x:0, y:H-0.4, w:W, h:0.22, fontSize:8, align:"center", fontFace:MONO, hyperlink:{ url:SIGNAL_SHARE_URL } });
+    if (WM) {
+      slide.addText(
+        [ { text: "Made with ", options:{ color:TEXT3 } },
+          { text: "Signal", options:{ color:ACCENT, bold:true } },
+          { text: " · " + SIGNAL_SHARE_HOST, options:{ color:TEXT3 } } ],
+        { x:0, y:H-0.4, w:W, h:0.22, fontSize:8, align:"center", fontFace:MONO, hyperlink:{ url:SIGNAL_SHARE_URL } });
+    } else {
+      /* clean (paid) — neutral centred label, no Signal referral */
+      slide.addText(`${brandLabel.toUpperCase()}  ·  ${monthName.toUpperCase()} ${year}`, { x:0, y:H-0.4, w:W, h:0.22, fontSize:8, bold:true, color:TEXT3, charSpacing:2, align:"center", fontFace:MONO });
+    }
     slide.addText(`${brandLabel.toUpperCase()}\n${monthName.toUpperCase()} ${year}`, { x:W-2.4, y:H-0.5, w:2.2, h:0.4, fontSize:7, bold:true, color:TEXT3, charSpacing:1.5, align:"right", fontFace:MONO, lineSpacingMultiple:1.1 });
     if (pageNo != null) slide.addText(String(pageNo).padStart(2,"0"), { x:0.3, y:H-0.4, w:1, h:0.22, fontSize:8, bold:true, color:TEXT3, fontFace:MONO });
   };
@@ -1618,12 +1669,16 @@ async function generatePPT(state) {
       slide.addText(`◉ SIGNAL: ${signalKeyword}`, { x:W-2.45, y:H-0.44, w:2.2, h:0.24, fontSize:7.5, bold:true, color:"F5A623", fontFace:"Courier New" });
     }
 
-    /* footer — credit watermark + referral link */
-    slide.addText(
-      [ { text: "Made with ", options:{ color:TEXT3 } },
-        { text: "Signal", options:{ color:ACCENT, bold:true } },
-        { text: " · " + SIGNAL_SHARE_HOST + "   ·   " + brandLabel + " Brand Window · " + monthName + " " + year, options:{ color:TEXT3 } } ],
-      { x:0.2, y:H-0.28, w:W-0.4, h:0.2, fontSize:7, fontFace:MONO, hyperlink:{ url:SIGNAL_SHARE_URL } });
+    /* footer — referral credit on free/legacy decks; clean on paid */
+    if (WM) {
+      slide.addText(
+        [ { text: "Made with ", options:{ color:TEXT3 } },
+          { text: "Signal", options:{ color:ACCENT, bold:true } },
+          { text: " · " + SIGNAL_SHARE_HOST + "   ·   " + brandLabel + " Brand Window · " + monthName + " " + year, options:{ color:TEXT3 } } ],
+        { x:0.2, y:H-0.28, w:W-0.4, h:0.2, fontSize:7, fontFace:MONO, hyperlink:{ url:SIGNAL_SHARE_URL } });
+    } else {
+      slide.addText(`${brandLabel} Brand Window · ${monthName} ${year}`, { x:0.2, y:H-0.28, w:W-0.4, h:0.2, fontSize:7, color:TEXT3, fontFace:MONO });
+    }
   });
 
   /* ════════════════════════════════════════
@@ -1774,5 +1829,5 @@ Object.assign(window, {
   callGemini, parseChartData, parseInsight,
   analyzeWindow, suggestCompetitors, buildPrompt, generatePDF, generateReport, generatePPT,
   searchBrandCompetitors, findKnownBrand, registerCustomBrand, requestBrand,
-  CUSTOM_BRAND_KEY, BRAND_CATEGORIES, contextLabel,
+  CUSTOM_BRAND_KEY, BRAND_CATEGORIES, contextLabel, getUserTier,
 });

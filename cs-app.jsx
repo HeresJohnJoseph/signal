@@ -44,6 +44,20 @@ function App() {
   const [suggesting, setSuggesting] = useState(false);
   const [cards, setCards] = useState([]);
   const [geminiCalls, setGeminiCalls] = useState(() => getGeminiCallsToday());
+  /* Tier (Free / Solo / Agency). Default open until the sheet says otherwise so
+     nothing downgrades before the Tier column exists. */
+  const [tierInfo, setTierInfo] = useState({ tier: "agency", gating: false });
+  const [paywall, setPaywall] = useState(null);   // { gate } when a free user hits a locked export
+  const [stripeUrl, setStripeUrl] = useState("");
+  React.useEffect(() => {
+    if (DEMO_MODE) return;
+    let alive = true;
+    (async () => {
+      const t = await getUserTier(getUserEmail()); if (alive) setTierInfo(t);
+      const u = await getStripeProUrl(); if (alive) setStripeUrl(u);
+    })();
+    return () => { alive = false; };
+  }, []);
 
   const handleSetApiKey = (k) => { localStorage.setItem("cs_gemini_key", k); setApiKey(k); };
   const handleSetSignal = (k) => { localStorage.setItem("cs_signal_kw", k); setSignalKeyword(k); };
@@ -68,6 +82,14 @@ function App() {
   const brandCat = BRANDS[brandSel].cat;
   const ctxColor = colors[brandSel] || (BRANDS[brandSel] && BRANDS[brandSel].color) || "#FF5500";
   const hasCards = cards.length > 0;
+
+  /* Tier-derived gates (demo is always fully open + clean). Free = PDF-only +
+     forced watermark; paid = all formats + clean. Legacy (no Tier column) keeps
+     full access + watermark so nothing changes until tiers are configured. */
+  const effTier = DEMO_MODE ? "agency" : tierInfo.tier;
+  const gating  = DEMO_MODE ? false : tierInfo.gating;
+  const isFreeTier = gating && effTier === "free";
+  const exportWatermark = DEMO_MODE ? false : (!gating ? true : effTier === "free");
 
   const invalidate = () => { setRunState("idle"); setCards([]); setFetchErr(null); };
   const chooseBrand = (b) => { if (b !== brandSel) { setBrandSel(b); setRunState("idle"); setCards([]); setFetchErr(null); } };
@@ -264,7 +286,12 @@ function App() {
     }
   };
 
-  const stateForExport = () => ({ brandLabel, brandColor: ctxColor, month, year, cards, signalKeyword });
+  const stateForExport = () => ({ brandLabel, brandColor: ctxColor, month, year, cards, signalKeyword, watermark: exportWatermark });
+  /* Free tier: clean PPT + Report are paid — intercept and surface the paywall. */
+  const hitPaywall = (gate) => {
+    setPaywall({ gate });
+    if (window.posthog) window.posthog.capture('hit_paywall', { gate, tier: effTier });
+  };
   const onGenerate = async () => {
     setBusy(true);
     try { await generatePDF(stateForExport()); if (window.posthog) { window.posthog.capture('export_pdf', { brand: brandSel }); window.posthog.capture('exported', { format: 'pdf', brand: brandSel }); } } catch (e) { console.error(e); }
@@ -275,11 +302,13 @@ function App() {
   const [showMethodology, setShowMethodology] = useState(false);
   const [showAudit, setShowAudit] = useState(false);
   const onGenerateReport = async () => {
+    if (isFreeTier) { hitPaywall('export_report'); return; }
     setReportBusy(true);
     try { await generateReport(stateForExport()); if (window.posthog) window.posthog.capture('exported', { format: 'report', brand: brandSel }); } catch (e) { console.error(e); }
     setReportBusy(false);
   };
   const onGeneratePPT = async () => {
+    if (isFreeTier) { hitPaywall('export_powerpoint'); return; }
     setPptBusy(true);
     try { await generatePPT(stateForExport()); if (window.posthog) { window.posthog.capture('export_ppt', { brand: brandSel }); window.posthog.capture('exported', { format: 'powerpoint', brand: brandSel }); } } catch (e) { console.error(e); }
     setPptBusy(false);
@@ -300,6 +329,19 @@ function App() {
           ★ Welcome to Signal Pro — you now have full access. (click to dismiss)
         </div>
       )}
+      {paywall && (
+        <div className="paywall-overlay" onClick={() => setPaywall(null)}>
+          <div className="paywall-card" onClick={(e) => e.stopPropagation()}>
+            <div className="pw-kicker">UPGRADE TO UNLOCK</div>
+            <h3>Clean, client-ready exports are a Pro feature</h3>
+            <p>Your Free plan includes the <strong>watermarked PDF</strong>. Upgrade to remove the Signal watermark and export the <strong>PowerPoint deck</strong> and <strong>Intelligence Report</strong>.</p>
+            <div className="pw-actions">
+              <a className="pw-upgrade" href={stripeUrl ? proCheckoutLink(stripeUrl, getUserEmail()) : "signup.html#gopro"} target="_blank" rel="noopener">Upgrade to Pro</a>
+              <button className="pw-dismiss" onClick={() => setPaywall(null)}>Maybe later</button>
+            </div>
+          </div>
+        </div>
+      )}
       <Preloader cards={cards} runState={runState} />
       <Sidebar
         marketSel={marketSel} setMarket={chooseMarket}
@@ -310,7 +352,7 @@ function App() {
         onGenerate={onGenerate} busy={busy} canExport={canExport}
         signalKeyword={signalKeyword} setSignalKeyword={handleSetSignal}
         onGenerateReport={onGenerateReport} reportBusy={reportBusy} canReport={canReport}
-        onGeneratePPT={onGeneratePPT} pptBusy={pptBusy}
+        onGeneratePPT={onGeneratePPT} pptBusy={pptBusy} isFreeTier={isFreeTier}
         onShowMethodology={() => setShowMethodology(true)}
         onShowAudit={() => setShowAudit(true)}
         geminiCalls={geminiCalls} />
