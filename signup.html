@@ -438,17 +438,26 @@
     };
 
     try {
-      /* text/plain avoids a CORS preflight, which Apps Script web apps can't answer */
-      var res = await fetch(APPS_SCRIPT_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      /* New signup row written → fire signed_up once (this submit path is only
-         reached by new users; returning users are redirected before reaching it). */
+      /* Best-effort lead capture. The POST to Apps Script 302-redirects to a
+         different origin; some in-app browsers (e.g. WhatsApp's) and strict
+         tracking-protection modes reject that cross-origin hop. A failed lead
+         write must NEVER block access — capture what we can, then always run
+         the allowlist gate. (text/plain avoids a CORS preflight; keepalive
+         lets the request finish through the redirect.) */
+      try {
+        await fetch(APPS_SCRIPT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(payload),
+          keepalive: true,
+        });
+      } catch (postErr) {
+        console.warn('Lead-capture POST could not be confirmed — continuing:', postErr);
+      }
+      /* Fire once for a new signup (this submit path is only reached by new
+         users; returning users are redirected before reaching it). */
       if (window.posthog) window.posthog.capture('signed_up', { email: payload.email });
-      /* Request captured. Gate on the beta allowlist — paying Pro users skip it. */
+      /* Gate on the beta allowlist — paying Pro users skip it. */
       var status = await checkAllowlist(payload.email);
       if (status === 'deny') {
         if (await checkPro(payload.email)) {
