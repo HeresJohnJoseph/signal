@@ -44,6 +44,7 @@ function App() {
   const [suggesting, setSuggesting] = useState(false);
   const [cards, setCards] = useState([]);
   const [geminiCalls, setGeminiCalls] = useState(() => getGeminiCallsToday());
+  const [runsUsed, setRunsUsed] = useState(() => getRunsThisMonth());
   /* Tier (Free / Solo / Agency). Default open until the sheet says otherwise so
      nothing downgrades before the Tier column exists. */
   const [tierInfo, setTierInfo] = useState({ tier: "agency", gating: false });
@@ -90,6 +91,12 @@ function App() {
   const gating  = DEMO_MODE ? false : tierInfo.gating;
   const isFreeTier = gating && effTier === "free";
   const exportWatermark = DEMO_MODE ? false : (!gating ? true : effTier === "free");
+  /* Monthly report cap. Only enforced once tiers are configured (gating on);
+     legacy/demo stay uncapped so nothing changes for current beta users.
+     Client-side/cosmetic — real enforcement belongs server-side. */
+  const runCap = (DEMO_MODE || !gating) ? Infinity : runCapForTier(effTier);
+  const runsLeft = runCap === Infinity ? Infinity : Math.max(0, runCap - runsUsed);
+  const runCapped = runsLeft <= 0;
 
   const invalidate = () => { setRunState("idle"); setCards([]); setFetchErr(null); };
   const chooseBrand = (b) => { if (b !== brandSel) { setBrandSel(b); setRunState("idle"); setCards([]); setFetchErr(null); } };
@@ -120,6 +127,9 @@ function App() {
   };
 
   const onRun = async () => {
+    /* Monthly report cap (paid tiers only, once gating is on). Free hits this
+       after 2 runs → paywall. Uncapped in demo / before tiers configured. */
+    if (runCapped) { hitPaywall('runs'); return; }
     setRunState("running");
     setFetchErr(null);
 
@@ -142,6 +152,7 @@ function App() {
       const fetched = await loadSheetCompetitors(brandSel, colors, month, year, marketSel);
       setCards(fetched);
       setRunState("ready");
+      setRunsUsed(incrementRuns());   // count this report against the monthly cap
       if (window.posthog) window.posthog.capture('run_snapshot', { brand: brandSel, competitor_count: fetched.length, month, year });
       if (window.posthog) window.posthog.capture('ran_snapshot', { market: marketSel, category: BRANDS[brandSel] && BRANDS[brandSel].category, brand: brandLabel });
 
@@ -332,9 +343,18 @@ function App() {
       {paywall && (
         <div className="paywall-overlay" onClick={() => setPaywall(null)}>
           <div className="paywall-card pw-pricing" onClick={(e) => e.stopPropagation()}>
-            <div className="pw-kicker">UPGRADE TO UNLOCK</div>
-            <h3>Clean, client-ready exports are a Pro feature</h3>
-            <p>You're on <strong>Free</strong>. Go Pro to remove the Signal watermark and unlock the <strong>PowerPoint deck</strong> and <strong>Intelligence Report</strong>.</p>
+            <div className="pw-kicker">{paywall.gate === 'runs' ? "MONTHLY LIMIT REACHED" : "UPGRADE TO UNLOCK"}</div>
+            {paywall.gate === 'runs' ? (
+              <>
+                <h3>You've used your {runCap} reports this month</h3>
+                <p>Your <strong>Free</strong> plan includes {runCap} reports a month. Upgrade to Pro for <strong>10 reports a month</strong> plus clean, client-ready exports. Your limit resets on the 1st.</p>
+              </>
+            ) : (
+              <>
+                <h3>Clean, client-ready exports are a Pro feature</h3>
+                <p>You're on <strong>Free</strong>. Go Pro to remove the Signal watermark and unlock the <strong>PowerPoint deck</strong> and <strong>Intelligence Report</strong>.</p>
+              </>
+            )}
             <div className="pw-plans">
               <div className="pw-plan">
                 <div className="pw-plan-name">Free</div>
@@ -380,7 +400,8 @@ function App() {
         onGeneratePPT={onGeneratePPT} pptBusy={pptBusy} isFreeTier={isFreeTier}
         onShowMethodology={() => setShowMethodology(true)}
         onShowAudit={() => setShowAudit(true)}
-        geminiCalls={geminiCalls} />
+        geminiCalls={geminiCalls}
+        runsUsed={runsUsed} runCap={runCap} showRunQuota={gating && runCap !== Infinity} />
 
       <MethodologyPanel show={showMethodology} onClose={() => setShowMethodology(false)} />
       <SocialAuditPanel show={showAudit} onClose={() => setShowAudit(false)} cards={cards} apiKey={apiKey} year={year} />

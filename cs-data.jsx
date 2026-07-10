@@ -360,6 +360,31 @@ function incrementGeminiCalls() {
   return calls;
 }
 
+/* ---- Monthly report/run counter (per-tier caps) ----
+   A "run" = one competitor snapshot (produces a deck). Caps are per calendar
+   month. NOTE: this is a CLIENT-SIDE (localStorage) counter — cosmetic + soft
+   enforcement only. It can be cleared by the user; real enforcement must live
+   server-side in api/analyze.js keyed by email. See [[pricing_plan]]. */
+const RUN_CAPS = { free: 2, solo: 10, pro: 10, agency: Infinity };
+function runCapForTier(tier) {
+  return Object.prototype.hasOwnProperty.call(RUN_CAPS, tier) ? RUN_CAPS[tier] : Infinity;
+}
+function runPeriodKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${d.getMonth() + 1}`;   // e.g. "2026-7"
+}
+function getRunsThisMonth() {
+  const stored = JSON.parse(localStorage.getItem('signal_run_quota') || '{}');
+  return stored.period === runPeriodKey() ? (stored.runs || 0) : 0;
+}
+function incrementRuns() {
+  const period = runPeriodKey();
+  const stored = JSON.parse(localStorage.getItem('signal_run_quota') || '{}');
+  const runs = stored.period === period ? (stored.runs || 0) + 1 : 1;
+  localStorage.setItem('signal_run_quota', JSON.stringify({ period, runs }));
+  return runs;
+}
+
 /* Check if the local dev proxy is alive (fast, no throws) */
 async function proxyAlive() {
   try {
@@ -1830,4 +1855,5 @@ Object.assign(window, {
   analyzeWindow, suggestCompetitors, buildPrompt, generatePDF, generateReport, generatePPT,
   searchBrandCompetitors, findKnownBrand, registerCustomBrand, requestBrand,
   CUSTOM_BRAND_KEY, BRAND_CATEGORIES, contextLabel, getUserTier,
+  getRunsThisMonth, incrementRuns, runCapForTier,
 });

@@ -880,7 +880,8 @@ function Sidebar(props) {
           signalKeyword, setSignalKeyword,
           onGenerateReport, reportBusy, canReport,
           onGeneratePPT, pptBusy, isFreeTier,
-          onShowMethodology, geminiCalls = 0 } = props;
+          onShowMethodology, geminiCalls = 0,
+          runsUsed = 0, runCap = Infinity, showRunQuota = false } = props;
   /* Signal Pro — badge when paid, "Go Pro" CTA otherwise. */
   const [isPro, setIsPro] = _useS(getProStatus());
   const [stripeUrl, setStripeUrl] = _useS("");
@@ -977,6 +978,18 @@ function Sidebar(props) {
           <span className="glyph">◈</span>{runState === "running" ? "Running…" : "Run Snapshot"}
         </button>
         <div className="cta-hint">Syncs competitor links from the tracker<br/>into a brand window per competitor.</div>
+
+        {showRunQuota && (
+          <div className="quota-chip" style={{ borderColor: runsUsed >= runCap ? "var(--accent)" : "var(--card-2)" }}>
+            <span className="quota-ic" style={runsUsed >= runCap ? { color: "var(--accent)" } : null}>▤</span>
+            <span className="quota-body">
+              <span className="quota-k">Reports this month</span>
+              <span className="quota-v" style={runsUsed >= runCap ? { color: "var(--accent)", fontWeight: 700 } : null}>
+                {Math.min(runsUsed, runCap)} of {runCap} used
+              </span>
+            </span>
+          </div>
+        )}
 
         <button className={"btn-ghost " + (busy ? "busy" : "")} onClick={onGenerate} disabled={!canExport || busy}>
           <span className="sparkle">↓</span>{busy ? "Compiling…" : "Generate Slides PDF"}
