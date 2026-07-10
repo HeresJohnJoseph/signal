@@ -144,6 +144,50 @@ html, body {
 }
 .pw-dismiss:hover { color: var(--text-1); border-color: var(--text-3); }
 
+/* ── Free vs Pro comparison (wider paywall variant) ── */
+.paywall-card.pw-pricing { max-width: 620px; }
+.pw-plans { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 4px 0 20px; }
+.pw-plan {
+  position: relative; border: 1px solid var(--card-2); border-radius: 13px;
+  padding: 18px 16px 16px; background: rgba(255,255,255,0.015);
+}
+.pw-plan-hi {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent), 0 12px 34px -12px rgba(255,85,0,0.5);
+  background: rgba(255,85,0,0.04);
+}
+.pw-plan-badge {
+  position: absolute; top: -9px; right: 14px;
+  font-family: var(--mono); font-size: 8.5px; font-weight: 700; letter-spacing: 1.5px;
+  background: var(--accent); color: #0C0F16; padding: 2px 8px; border-radius: 5px;
+}
+.pw-plan-name {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 2px; font-weight: 700;
+  text-transform: uppercase; color: var(--text-2); margin-bottom: 8px;
+}
+.pw-plan-hi .pw-plan-name { color: var(--accent); }
+.pw-plan-price { display: flex; align-items: baseline; gap: 3px; }
+.pw-plan-price .pw-amt { font-family: var(--serif, "Playfair Display", serif); font-size: 30px; font-weight: 700; color: var(--text-1); line-height: 1; }
+.pw-plan-price .pw-per { font-size: 13px; color: var(--text-2); font-weight: 600; }
+.pw-plan-tag { font-size: 11px; color: var(--text-3); margin: 6px 0 14px; min-height: 15px; }
+.pw-feats { list-style: none; margin: 0; padding: 0; }
+.pw-feats li {
+  display: flex; align-items: flex-start; gap: 8px;
+  font-size: 12.5px; line-height: 1.45; color: var(--text-2); padding: 5px 0;
+}
+.pw-feats li strong { color: var(--text-1); font-weight: 700; }
+.pw-feats li em { font-style: normal; color: var(--text-3); }
+.pw-check { color: var(--accent); font-weight: 700; flex-shrink: 0; }
+.pw-check.pw-mut { color: var(--text-3); }
+.pw-x { color: var(--text-3); flex-shrink: 0; font-weight: 700; }
+.pw-off { color: var(--text-3); }
+.pw-pricing .pw-actions { flex-direction: column; align-items: stretch; gap: 8px; }
+.pw-pricing .pw-upgrade { padding: 13px 14px; }
+.pw-pricing .pw-dismiss { text-align: center; }
+@media (max-width: 520px) {
+  .pw-plans { grid-template-columns: 1fr; }
+}
+
 /* ── Brand dropdown (token-light selector — sheet data, no live AI) ── */
 .brand-dropdown { width: 100%; }
 

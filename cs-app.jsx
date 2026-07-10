@@ -331,12 +331,37 @@ function App() {
       )}
       {paywall && (
         <div className="paywall-overlay" onClick={() => setPaywall(null)}>
-          <div className="paywall-card" onClick={(e) => e.stopPropagation()}>
+          <div className="paywall-card pw-pricing" onClick={(e) => e.stopPropagation()}>
             <div className="pw-kicker">UPGRADE TO UNLOCK</div>
             <h3>Clean, client-ready exports are a Pro feature</h3>
-            <p>Your Free plan includes the <strong>watermarked PDF</strong>. Upgrade to remove the Signal watermark and export the <strong>PowerPoint deck</strong> and <strong>Intelligence Report</strong>.</p>
+            <p>You're on <strong>Free</strong>. Go Pro to remove the Signal watermark and unlock the <strong>PowerPoint deck</strong> and <strong>Intelligence Report</strong>.</p>
+            <div className="pw-plans">
+              <div className="pw-plan">
+                <div className="pw-plan-name">Free</div>
+                <div className="pw-plan-price"><span className="pw-amt">$0</span></div>
+                <div className="pw-plan-tag">Your current plan</div>
+                <ul className="pw-feats">
+                  <li><span className="pw-check pw-mut">✓</span><span>2 reports / month</span></li>
+                  <li><span className="pw-check pw-mut">✓</span><span>Full AI competitor analysis</span></li>
+                  <li><span className="pw-check pw-mut">✓</span><span>PDF export <em>(watermarked)</em></span></li>
+                  <li className="pw-off"><span className="pw-x">✕</span><span>PowerPoint &amp; Report</span></li>
+                </ul>
+              </div>
+              <div className="pw-plan pw-plan-hi">
+                <div className="pw-plan-badge">RECOMMENDED</div>
+                <div className="pw-plan-name">Pro</div>
+                <div className="pw-plan-price"><span className="pw-amt">$29</span><span className="pw-per">/mo</span></div>
+                <div className="pw-plan-tag">or $290/yr — 2 months free</div>
+                <ul className="pw-feats">
+                  <li><span className="pw-check">✓</span><span><strong>10 reports / month</strong></span></li>
+                  <li><span className="pw-check">✓</span><span>Full AI competitor analysis</span></li>
+                  <li><span className="pw-check">✓</span><span><strong>Clean, unwatermarked</strong> exports</span></li>
+                  <li><span className="pw-check">✓</span><span>PowerPoint + PDF + Report</span></li>
+                </ul>
+              </div>
+            </div>
             <div className="pw-actions">
-              <a className="pw-upgrade" href={stripeUrl ? proCheckoutLink(stripeUrl, getUserEmail()) : "signup.html#gopro"} target="_blank" rel="noopener">Upgrade to Pro</a>
+              <a className="pw-upgrade" href={stripeUrl ? proCheckoutLink(stripeUrl, getUserEmail()) : "signup.html#gopro"} target="_blank" rel="noopener">Upgrade to Pro — $29/mo →</a>
               <button className="pw-dismiss" onClick={() => setPaywall(null)}>Maybe later</button>
             </div>
           </div>

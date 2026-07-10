@@ -148,6 +148,44 @@
   .foot {
     margin-top: 24px; font-size: 10.5px; color: var(--text-3); text-align: center; line-height: 1.6;
   }
+
+  /* Free vs Pro comparison on the waitlist screen */
+  .plans { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: left; }
+  .plan {
+    position: relative; border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px 14px 14px; background: rgba(255,255,255,0.015);
+  }
+  .plan-hi {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent), 0 12px 32px -14px rgba(255,85,0,0.5);
+    background: rgba(255,85,0,0.04);
+  }
+  .plan-badge {
+    position: absolute; top: -9px; right: 12px;
+    font-family: var(--mono); font-size: 8px; font-weight: 700; letter-spacing: 1.2px;
+    background: var(--accent); color: #0C0F16; padding: 2px 7px; border-radius: 5px;
+  }
+  .plan-name {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 2px; font-weight: 700;
+    text-transform: uppercase; color: var(--text-2); margin-bottom: 7px;
+  }
+  .plan-hi .plan-name { color: var(--accent); }
+  .plan-price { display: flex; align-items: baseline; gap: 3px; }
+  .plan-price .amt { font-family: var(--serif); font-size: 27px; font-weight: 700; color: var(--text-1); line-height: 1; }
+  .plan-price .per { font-size: 12px; color: var(--text-2); font-weight: 600; }
+  .plan-tag { font-size: 10px; color: var(--text-3); margin: 5px 0 12px; min-height: 26px; }
+  .feats { list-style: none; margin: 0; padding: 0; }
+  .feats li {
+    display: flex; align-items: flex-start; gap: 7px;
+    font-size: 11.5px; line-height: 1.4; color: var(--text-2); padding: 4px 0;
+  }
+  .feats li strong { color: var(--text-1); font-weight: 700; }
+  .feats li em { font-style: normal; color: var(--text-3); }
+  .ck { color: var(--accent); font-weight: 700; flex-shrink: 0; }
+  .ck.mut { color: var(--text-3); }
+  .xk { color: var(--text-3); flex-shrink: 0; font-weight: 700; }
+  .off { color: var(--text-3); }
+  @media (max-width: 440px) { .plans { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
@@ -251,12 +289,35 @@
     </p>
 
     <!-- Skip-the-line paywall: shown only when a Stripe link is configured -->
-    <div id="gopro" style="display:none; margin-top:22px; padding-top:20px; border-top:1px solid var(--line, #232A3D);">
-      <div style="font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent); font-weight:700; margin-bottom:6px;">Don't want to wait?</div>
-      <p style="font-size:13px; line-height:1.6; color:var(--text-2); margin:0 0 14px;">
-        Go Pro for instant access — start running competitor intelligence today.
-      </p>
-      <a id="gopro-btn" href="#" class="submit" style="display:inline-block; text-decoration:none; max-width:320px;">Go Pro — Instant Access →</a>
+    <div id="gopro" style="display:none; margin-top:24px; padding-top:22px; border-top:1px solid var(--border);">
+      <div style="font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); font-weight:700; margin-bottom:14px;">Don't want to wait?</div>
+      <div class="plans">
+        <div class="plan">
+          <div class="plan-name">Free</div>
+          <div class="plan-price"><span class="amt">$0</span></div>
+          <div class="plan-tag">When your invite opens</div>
+          <ul class="feats">
+            <li><span class="ck mut">✓</span><span>2 reports / month</span></li>
+            <li><span class="ck mut">✓</span><span>Full AI competitor analysis</span></li>
+            <li><span class="ck mut">✓</span><span>PDF export <em>(watermarked)</em></span></li>
+            <li class="off"><span class="xk">✕</span><span>PowerPoint &amp; Report</span></li>
+          </ul>
+        </div>
+        <div class="plan plan-hi">
+          <div class="plan-badge">INSTANT ACCESS</div>
+          <div class="plan-name">Pro</div>
+          <div class="plan-price"><span class="amt">$29</span><span class="per">/mo</span></div>
+          <div class="plan-tag">or $290/yr — 2 months free</div>
+          <ul class="feats">
+            <li><span class="ck">✓</span><span><strong>10 reports / month</strong></span></li>
+            <li><span class="ck">✓</span><span>Full AI competitor analysis</span></li>
+            <li><span class="ck">✓</span><span><strong>Clean, unwatermarked</strong> exports</span></li>
+            <li><span class="ck">✓</span><span>PowerPoint + PDF + Report</span></li>
+          </ul>
+        </div>
+      </div>
+      <a id="gopro-btn" href="#" class="submit" style="display:block; text-decoration:none; margin-top:18px;">Go Pro — Instant Access →</a>
+      <p style="font-size:11px; color:var(--text-3); margin:12px 0 0;">Start running competitor intelligence today. Cancel anytime.</p>
     </div>
   </div>
 
