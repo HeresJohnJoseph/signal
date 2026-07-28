@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Signal — You're in</title>
+<meta name="robots" content="noindex" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=Playfair+Display:wght@600;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="cs-liquid.css?v=20260728a" />
+<link rel="stylesheet" href="cs-pricing.css?v=20260728a" />
+<style>
+  html, body { margin: 0; padding: 0; background: #05070C; }
+  :root[data-theme="light"] body { background: #F7F8FA; }
+  * { box-sizing: border-box; }
+  .sx-wrap { max-width: 620px; margin: 0 auto; text-align: center; padding: clamp(60px,12vh,120px) 0; }
+  .sx-mark {
+    width: 60px; height: 60px; border-radius: 20px; margin: 0 auto 26px;
+    display: grid; place-items: center; font-size: 26px; color: #fff;
+    background: linear-gradient(140deg, var(--pr-human), #B96A9B 55%, var(--pr-machine));
+    box-shadow: 0 16px 40px -12px rgba(255,85,0,.55);
+  }
+  .sx-title {
+    font-family: 'Archivo', sans-serif; font-variation-settings: 'wdth' 92, 'wght' 900;
+    font-size: clamp(32px,6vw,56px); letter-spacing: -.035em; line-height: .96; margin: 0 0 16px;
+  }
+  .sx-sub { color: var(--pr-dim); font-size: 16px; line-height: 1.6; margin: 0 auto 30px; max-width: 46ch; }
+  .sx-card {
+    text-align: left; border-radius: 20px; padding: 24px 26px; margin: 0 0 26px;
+    backdrop-filter: blur(20px) saturate(150%); -webkit-backdrop-filter: blur(20px) saturate(150%);
+    position: relative; isolation: isolate; overflow: hidden;
+  }
+  .sx-card > * { position: relative; z-index: 2; }
+  .sx-card > .refract, .sx-card > .sheen { z-index: 0; }
+  .sx-step { display: flex; gap: 13px; align-items: flex-start; padding: 9px 0; font-size: 14.5px; line-height: 1.5; }
+  .sx-n {
+    flex: none; width: 22px; height: 22px; border-radius: 50%;
+    display: grid; place-items: center; font-size: 11px; font-weight: 700;
+    background: var(--pr-ink); color: var(--pr-bg);
+  }
+  .sx-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .sx-note {
+    margin-top: 30px; font-family: 'Space Mono', monospace; font-size: 10px;
+    letter-spacing: .18em; text-transform: uppercase; color: var(--pr-faint);
+  }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute;pointer-events:none">
+  <defs>
+    <filter id="liquid-refract" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.011 0.016" numOctaves="2" seed="12" result="turb">
+        <animate attributeName="baseFrequency" dur="24s" values="0.011 0.016;0.017 0.010;0.011 0.016" repeatCount="indefinite" />
+      </feTurbulence>
+      <feGaussianBlur in="turb" stdDeviation="3.2" result="soft" />
+      <feDisplacementMap in="SourceGraphic" in2="soft" scale="9" xChannelSelector="R" yChannelSelector="G" />
+    </filter>
+  </defs>
+</svg>
+
+<script>
+  (function () {
+    try {
+      var saved = localStorage.getItem('signal_theme');
+      if (saved === 'light' || saved === 'dark') { document.documentElement.setAttribute('data-theme', saved); return; }
+    } catch (e) {}
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+      document.documentElement.setAttribute('data-theme', 'light');
+    }
+  })();
+</script>
+
+<div class="pr-page">
+  <div class="sx-wrap">
+    <div class="sx-mark" aria-hidden="true">◈</div>
+    <h1 class="sx-title">Payment received.<br />Welcome to Signal.</h1>
+    <p class="sx-sub">
+      Lemonsqueezy has your receipt and your subscription is active. One short step and
+      your account is switched over to live competitor data.
+    </p>
+
+    <div class="sx-card liquid">
+      <span class="refract"></span><span class="sheen"></span>
+      <div class="sx-step"><span class="sx-n">1</span><span>Check your inbox — Lemonsqueezy has emailed your receipt and subscription details.</span></div>
+      <div class="sx-step"><span class="sx-n">2</span><span>We activate your account. This is done by hand during launch week, usually within a couple of hours and always within one business day.</span></div>
+      <div class="sx-step"><span class="sx-n">3</span><span>You'll get an email from us the moment live data is switched on. Until then the app runs on demo data.</span></div>
+    </div>
+
+    <div class="sx-actions">
+      <a class="pr-buy pr-buy-hi" href="competitor-snapshot.html" style="text-decoration:none">
+        Open Signal <span class="pr-arw" aria-hidden="true">→</span>
+      </a>
+      <a class="pr-demo-btn" href="mailto:hello@signal.build?subject=Signal%20subscription%20activation">
+        Email us
+      </a>
+    </div>
+
+    <p class="sx-note">Signal · Competitor Intelligence · Cape Town</p>
+  </div>
+</div>
+
+<script>
+  /* Mark this browser as having paid so the app stops nagging immediately.
+     This is optimistic UX only — real access is granted server-side when the
+     account is promoted, so setting it here cannot unlock anything on its own. */
+  /* value must be the string "true" — getProStatus() in cs-data.jsx does an
+     exact === "true" comparison, so "1" would silently never register */
+  try { localStorage.setItem('signal_pro', 'true'); } catch (e) {}
+</script>
+</body>
+</html>

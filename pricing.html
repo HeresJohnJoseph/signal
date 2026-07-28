@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Signal — Pricing</title>
+<meta name="description" content="Signal pricing — Insight from $49/month, Intelligence from $99/month. Competitor intelligence for brands and agencies. Try the demo free." />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<!-- Same font link the rest of Signal already loads — no new third-party
+     dependency is introduced by this page. -->
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=Playfair+Display:wght@600;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+
+<link rel="stylesheet" href="cs-liquid.css?v=20260728a" />
+<link rel="stylesheet" href="cs-pricing.css?v=20260728a" />
+<style>
+  html, body { margin: 0; padding: 0; background: #05070C; }
+  :root[data-theme="light"] body { background: #F7F8FA; }
+  * { box-sizing: border-box; }
+</style>
+
+<!-- SVG filter bench for the liquid-glass refraction (same as the app) -->
+</head>
+<body>
+
+<svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute;pointer-events:none">
+  <defs>
+    <filter id="liquid-refract" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.011 0.016" numOctaves="2" seed="12" result="turb">
+        <animate attributeName="baseFrequency" dur="24s" values="0.011 0.016;0.017 0.010;0.011 0.016" repeatCount="indefinite" />
+      </feTurbulence>
+      <feGaussianBlur in="turb" stdDeviation="3.2" result="soft" />
+      <feDisplacementMap in="SourceGraphic" in2="soft" scale="9" xChannelSelector="R" yChannelSelector="G" />
+    </filter>
+  </defs>
+</svg>
+
+<div id="root"></div>
+
+<!-- React + Babel, pinned to the same versions the app uses -->
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<!-- Set the theme before first paint so a light visitor never sees a dark flash -->
+<script>
+  (function () {
+    try {
+      var saved = localStorage.getItem('signal_theme');
+      if (saved === 'light' || saved === 'dark') { document.documentElement.setAttribute('data-theme', saved); return; }
+    } catch (e) {}
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+      document.documentElement.setAttribute('data-theme', 'light');
+    }
+  })();
+</script>
+
+<!-- cs-data provides getUserEmail + lemonCheckoutUrl; cs-pricing provides the page -->
+<script type="text/babel" src="cs-data.jsx?v=20260728a"></script>
+<script type="text/babel" src="cs-pricing.jsx?v=20260728a"></script>
+<script type="text/babel">
+  ReactDOM.createRoot(document.getElementById('root')).render(<PricingPage />);
+</script>
+</body>
+</html>

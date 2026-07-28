@@ -884,11 +884,11 @@ function Sidebar(props) {
           runsUsed = 0, runCap = Infinity, showRunQuota = false } = props;
   /* Signal Pro — badge when paid, "Go Pro" CTA otherwise. */
   const [isPro, setIsPro] = _useS(getProStatus());
-  const [canBuyPro, setCanBuyPro] = _useS(false);   // Paystack configured (public key + plan)
+  const [canBuyPro, setCanBuyPro] = _useS(false);   // a Lemonsqueezy checkout URL is configured
   React.useEffect(() => {
     let alive = true;
     (async () => {
-      const ready = await paystackConfigured();
+      const ready = await lemonConfigured();
       if (alive) setCanBuyPro(ready);
       /* never downgrade a just-paid local flag; upgrade across devices */
       const pro = getProStatus() || await checkProRemote(getUserEmail());
@@ -1021,7 +1021,8 @@ function Sidebar(props) {
           </div>
         ) : canBuyPro ? (
           <button className="btn-ppt" onClick={() => {
-              openPaystackCheckout(getUserEmail());
+              lemonCheckoutUrl("intelligence", "annual", getUserEmail())
+                .then((url) => { window.location.href = url || "pricing.html"; });
               if (window.posthog) window.posthog.capture("upgrade_clicked", { source: "sidebar" });
             }}
              style={{ textAlign: "center", cursor: "pointer" }}>

@@ -1,0 +1,326 @@
+/* ============================================================
+   SIGNAL — PRICING PAGE
+   ------------------------------------------------------------
+   Loaded after cs-styles.css and cs-liquid.css. Reuses the
+   liquid-glass material (.liquid / .refract / .sheen) so this
+   page is the same system as the app, not a lookalike.
+
+   THEME: the app is dark-only. This page carries its own light
+   palette because a pricing page gets opened from search, in
+   daylight, on someone else's laptop. It follows
+   prefers-color-scheme and honours an explicit data-theme.
+   Everything below is scoped to .pr-page so nothing here can
+   reach the app or the export surfaces.
+   ============================================================ */
+
+.pr-page {
+  /* dark is the default, matching the rest of Signal */
+  --pr-bg:      #05070C;
+  --pr-bg-2:    #0A0E17;
+  --pr-ink:     #EDF1F7;
+  --pr-dim:     #8A94A8;
+  --pr-faint:   #4A5468;
+  --pr-line:    rgba(255,255,255,0.09);
+  --pr-glass:   rgba(255,255,255,0.03);
+  --pr-glass-hi:rgba(255,255,255,0.28);
+  --pr-human:   #FF5500;
+  --pr-human-lt:#FF8A45;
+  --pr-machine: #22D3EE;
+  --pr-machine-lt:#8BEEFF;
+  --pr-shadow:  0 30px 70px -28px rgba(0,0,0,.85);
+
+  background: var(--pr-bg);
+  color: var(--pr-ink);
+  min-height: 100vh;
+  font-family: 'DM Sans', 'Inter', system-ui, sans-serif;
+  padding: clamp(18px, 4vw, 40px);
+  transition: background .4s ease, color .4s ease;
+}
+
+/* light — used when the visitor prefers it, or toggles to it */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) .pr-page {
+    --pr-bg:      #F7F8FA;
+    --pr-bg-2:    #FFFFFF;
+    --pr-ink:     #0B0F17;
+    --pr-dim:     #5A6478;
+    --pr-faint:   #98A1B2;
+    --pr-line:    rgba(11,15,23,0.10);
+    --pr-glass:   rgba(255,255,255,0.66);
+    --pr-glass-hi:rgba(255,255,255,0.95);
+    --pr-shadow:  0 24px 60px -30px rgba(11,15,23,.28);
+  }
+}
+:root[data-theme="light"] .pr-page {
+  --pr-bg:      #F7F8FA;
+  --pr-bg-2:    #FFFFFF;
+  --pr-ink:     #0B0F17;
+  --pr-dim:     #5A6478;
+  --pr-faint:   #98A1B2;
+  --pr-line:    rgba(11,15,23,0.10);
+  --pr-glass:   rgba(255,255,255,0.66);
+  --pr-glass-hi:rgba(255,255,255,0.95);
+  --pr-shadow:  0 24px 60px -30px rgba(11,15,23,.28);
+}
+
+/* the shared glass material, re-tuned per theme */
+.pr-page .liquid {
+  background:
+    linear-gradient(148deg, rgba(255,255,255,.07) 0%, rgba(255,255,255,.015) 44%, rgba(255,255,255,.05) 100%),
+    var(--pr-glass);
+  box-shadow:
+    inset 0 1px 0 var(--pr-glass-hi),
+    0 0 0 1px var(--pr-line),
+    var(--pr-shadow);
+}
+/* in light the glass is a bright frost rather than a dark pane */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) .pr-page .liquid {
+    background: linear-gradient(148deg, rgba(255,255,255,.92), rgba(255,255,255,.64)), var(--pr-glass);
+  }
+}
+:root[data-theme="light"] .pr-page .liquid {
+  background: linear-gradient(148deg, rgba(255,255,255,.92), rgba(255,255,255,.64)), var(--pr-glass);
+}
+
+.pr-mono {
+  font-family: 'Space Mono', ui-monospace, monospace;
+  text-transform: uppercase; letter-spacing: .22em; font-size: 10px;
+  color: var(--pr-faint);
+}
+
+/* ---- top bar ---- */
+.pr-top {
+  max-width: 1120px; margin: 0 auto clamp(28px,6vh,64px);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.pr-brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; }
+.pr-mark {
+  display: grid; place-items: center; width: 26px; height: 34px; border-radius: 11px;
+  background: linear-gradient(158deg, var(--pr-human-lt), var(--pr-human));
+  color: #fff; font-size: 13px; box-shadow: 0 6px 18px -5px rgba(255,85,0,.6);
+}
+.pr-word { font-family: 'Playfair Display', Georgia, serif; font-weight: 700; font-size: 22px; color: var(--pr-ink); }
+
+.pr-theme {
+  width: 38px; height: 38px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--pr-line); background: var(--pr-glass); color: var(--pr-ink);
+  font-size: 15px; display: grid; place-items: center;
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  transition: transform .3s cubic-bezier(.16,1,.3,1), border-color .3s;
+}
+.pr-theme:hover { transform: translateY(-2px); border-color: var(--pr-ink); }
+.pr-theme:focus-visible { outline: 2px solid var(--pr-machine); outline-offset: 3px; }
+
+/* ---- hero ---- */
+.pr-hero { max-width: 780px; margin: 0 auto clamp(30px,6vh,56px); text-align: center; }
+.pr-title {
+  font-family: 'Archivo', 'DM Sans', sans-serif;
+  font-size: clamp(32px, 6vw, 66px); line-height: .95; margin: 0 0 18px;
+}
+.pr-title .l1 {
+  display: block; font-variation-settings: 'wdth' 108, 'wght' 200;
+  font-size: .5em; letter-spacing: -.02em; color: var(--pr-dim); margin-bottom: .14em;
+}
+.pr-title .l2 { display: block; font-variation-settings: 'wdth' 92, 'wght' 900; letter-spacing: -.035em; }
+.contact-grad {
+  font-style: normal;
+  background: linear-gradient(96deg, var(--pr-human-lt) 0%, var(--pr-human) 24%, #B96A9B 52%, var(--pr-machine) 78%, var(--pr-machine-lt) 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.pr-sub { max-width: 52ch; margin: 0 auto 30px; color: var(--pr-dim); font-size: 15.5px; line-height: 1.62; }
+
+/* ---- billing cycle switch ---- */
+.pr-cycle {
+  display: inline-flex; gap: 4px; padding: 5px; border-radius: 999px;
+  background: var(--pr-glass); border: 1px solid var(--pr-line);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+}
+.pr-cycle-opt {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 20px; border-radius: 999px; border: 0; cursor: pointer;
+  background: transparent; color: var(--pr-dim);
+  font: inherit; font-size: 13.5px; font-weight: 600;
+  transition: background .3s, color .3s;
+}
+.pr-cycle-opt.on { background: var(--pr-ink); color: var(--pr-bg); }
+.pr-cycle-opt:focus-visible { outline: 2px solid var(--pr-machine); outline-offset: 2px; }
+.pr-save {
+  font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: .1em;
+  padding: 3px 7px; border-radius: 999px;
+  background: linear-gradient(120deg, var(--pr-human), var(--pr-machine)); color: #fff;
+}
+
+/* ---- plan grid ---- */
+.pr-grid {
+  max-width: 1000px; margin: 0 auto clamp(24px,5vh,44px);
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: clamp(16px,2.4vw,26px);
+  align-items: start;
+}
+@media (max-width: 780px) { .pr-grid { grid-template-columns: 1fr; } }
+
+.pr-card {
+  position: relative; isolation: isolate; overflow: hidden;
+  border-radius: 24px; padding: clamp(24px,3vw,34px);
+  display: flex; flex-direction: column; gap: 14px;
+  backdrop-filter: blur(24px) saturate(160%); -webkit-backdrop-filter: blur(24px) saturate(160%);
+}
+.pr-card > * { position: relative; z-index: 2; }
+.pr-card > .refract, .pr-card > .sheen { z-index: 0; }
+/* the featured tier earns the accent edge — one loud element, not two */
+.pr-card-hi { box-shadow: inset 0 1px 0 var(--pr-glass-hi), 0 0 0 1px rgba(255,85,0,.5), var(--pr-shadow); }
+.pr-badge {
+  align-self: flex-start;
+  font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: .2em;
+  padding: 5px 11px; border-radius: 999px; color: #fff;
+  background: linear-gradient(120deg, var(--pr-human), #B96A9B);
+}
+.pr-name {
+  font-family: 'Archivo', sans-serif; font-variation-settings: 'wdth' 94, 'wght' 800;
+  font-size: clamp(24px,2.6vw,32px); letter-spacing: -.03em; margin: 0; line-height: 1;
+}
+.pr-tagline { margin: 0; color: var(--pr-dim); font-size: 14px; line-height: 1.5; }
+
+.pr-price { margin: 6px 0 4px; }
+.pr-usd { display: flex; align-items: baseline; gap: 6px; }
+.pr-amt {
+  font-family: 'Archivo', sans-serif; font-variation-settings: 'wdth' 88, 'wght' 900;
+  font-size: clamp(38px,4.6vw,54px); letter-spacing: -.045em; line-height: 1;
+}
+.pr-per { color: var(--pr-dim); font-size: 15px; font-weight: 500; }
+/* ZAR is what actually gets charged — it is not a footnote */
+.pr-zar { margin-top: 7px; font-size: 14.5px; font-weight: 600; color: var(--pr-ink); }
+.pr-zar-note {
+  font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--pr-faint); margin-left: 6px;
+}
+.pr-equiv { margin-top: 4px; font-size: 12.5px; color: var(--pr-dim); }
+
+.pr-buy {
+  margin-top: 4px; padding: 14px 20px; border: 0; border-radius: 999px; cursor: pointer;
+  font: inherit; font-size: 14.5px; font-weight: 700;
+  display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+  background: var(--pr-ink); color: var(--pr-bg);
+  transition: transform .35s cubic-bezier(.16,1,.3,1), box-shadow .35s, filter .2s;
+}
+.pr-buy-hi {
+  background: linear-gradient(134deg, var(--pr-human-lt), var(--pr-human)); color: #fff;
+  box-shadow: 0 12px 30px -10px rgba(255,85,0,.6), inset 0 1px 0 rgba(255,255,255,.38);
+}
+.pr-buy:hover:not(:disabled) { transform: translateY(-2px); }
+.pr-buy:disabled { opacity: .55; cursor: wait; transform: none; }
+.pr-buy:focus-visible { outline: 2px solid var(--pr-machine); outline-offset: 3px; }
+.pr-arw { transition: transform .35s cubic-bezier(.16,1,.3,1); }
+.pr-buy:hover .pr-arw, .pr-demo-btn:hover .pr-arw { transform: translateX(4px); }
+
+.pr-feats { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 10px; }
+.pr-feats li { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; line-height: 1.45; }
+.pr-feats li.off { color: var(--pr-faint); }
+.pr-tick { flex: none; font-weight: 700; color: var(--pr-machine); }
+.pr-tick-off { color: var(--pr-faint); }
+
+/* ---- demo band — visually distinct from Subscribe by design ---- */
+.pr-demo {
+  position: relative; isolation: isolate; overflow: hidden;
+  max-width: 1000px; margin: 0 auto clamp(34px,7vh,72px);
+  border-radius: 22px; padding: clamp(20px,2.6vw,30px);
+  display: flex; align-items: center; justify-content: space-between; gap: 22px;
+  flex-wrap: wrap;
+  backdrop-filter: blur(20px) saturate(150%); -webkit-backdrop-filter: blur(20px) saturate(150%);
+}
+.pr-demo > * { position: relative; z-index: 2; }
+.pr-demo > .refract, .pr-demo > .sheen { z-index: 0; }
+.pr-demo-h {
+  font-family: 'Archivo', sans-serif; font-variation-settings: 'wdth' 96, 'wght' 700;
+  font-size: clamp(17px,2vw,22px); margin: 0 0 6px; letter-spacing: -.02em;
+}
+.pr-demo-p { margin: 0; color: var(--pr-dim); font-size: 14px; max-width: 54ch; line-height: 1.55; }
+/* deliberately a ghost button: the paid action is the filled one */
+.pr-demo-btn {
+  display: inline-flex; align-items: center; gap: 9px; white-space: nowrap;
+  padding: 13px 22px; border-radius: 999px; text-decoration: none;
+  font-size: 14px; font-weight: 700; color: var(--pr-ink);
+  border: 1px solid var(--pr-ink); background: transparent;
+  transition: transform .35s cubic-bezier(.16,1,.3,1), background .3s, color .3s;
+}
+.pr-demo-btn:hover { transform: translateY(-2px); background: var(--pr-ink); color: var(--pr-bg); }
+.pr-demo-btn:focus-visible { outline: 2px solid var(--pr-machine); outline-offset: 3px; }
+
+/* ---- comparison matrix ---- */
+.pr-matrix-wrap { max-width: 1000px; margin: 0 auto; overflow-x: auto; }
+.pr-matrix { width: 100%; border-collapse: collapse; min-width: 520px; }
+.pr-matrix-cap {
+  text-align: left; padding-bottom: 14px;
+  font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: .22em;
+  text-transform: uppercase; color: var(--pr-faint);
+}
+.pr-matrix th, .pr-matrix td { padding: 15px 14px; text-align: left; border-top: 1px solid var(--pr-line); }
+.pr-matrix thead th { border-top: 0; vertical-align: bottom; }
+.pr-matrix tbody th { font-weight: 500; font-size: 14px; color: var(--pr-dim); }
+.pr-matrix td { font-size: 14px; font-weight: 600; }
+.pr-m-name {
+  display: block; font-family: 'Archivo', sans-serif;
+  font-variation-settings: 'wdth' 94, 'wght' 800; font-size: 17px; letter-spacing: -.02em;
+}
+.pr-m-price { display: block; font-size: 13px; color: var(--pr-dim); margin-top: 3px; }
+.pr-m-zar { display: block; font-family: 'Space Mono', monospace; font-size: 10px; color: var(--pr-faint); margin-top: 2px; }
+
+.pr-err {
+  max-width: 1000px; margin: 0 auto 22px; padding: 12px 16px; border-radius: 12px;
+  background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.32);
+  color: #fca5a5; font-size: 13.5px; text-align: center;
+}
+:root[data-theme="light"] .pr-err { color: #b91c1c; }
+
+.pr-foot {
+  max-width: 1000px; margin: clamp(40px,8vh,80px) auto 0;
+  padding-top: 22px; border-top: 1px solid var(--pr-line);
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+}
+.pr-foot p { margin: 0; font-size: 12.5px; color: var(--pr-faint); }
+
+@media (max-width: 560px) {
+  .pr-demo { flex-direction: column; align-items: stretch; }
+  .pr-demo-btn { justify-content: center; }
+  .pr-cycle { width: 100%; }
+  .pr-cycle-opt { flex: 1; justify-content: center; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pr-page *, .pr-page *::before, .pr-page *::after {
+    animation-duration: .001ms !important; transition-duration: .001ms !important;
+  }
+}
+
+/* ============================================================
+   PAYWALL MODAL — additions for the two-tier structure.
+   Scoped to the modal; the app is dark-only so these need no
+   light variant.
+   ============================================================ */
+.pw-cycle {
+  display: flex; gap: 4px; padding: 4px; margin: 0 0 14px;
+  border-radius: 999px; background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.09);
+}
+.pw-cycle-opt {
+  flex: 1; padding: 9px 14px; border: 0; border-radius: 999px; cursor: pointer;
+  background: transparent; color: var(--text-2);
+  font-family: var(--sans); font-size: 12.5px; font-weight: 600;
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  transition: background .3s, color .3s;
+}
+.pw-cycle-opt.on { background: var(--text-1); color: var(--bg); }
+.pw-cycle-opt:focus-visible { outline: 2px solid #22D3EE; outline-offset: 2px; }
+.pw-save {
+  font-family: var(--mono); font-size: 8.5px; letter-spacing: .1em;
+  padding: 3px 6px; border-radius: 999px; color: #fff;
+  background: linear-gradient(120deg, var(--accent), #22D3EE);
+}
+/* the charged amount, never smaller than the reference amount */
+.pw-plan-zar {
+  margin-top: 5px;
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em;
+  color: var(--text-2);
+}
+.pw-feats li.pw-off { color: var(--text-3); }
+.pw-feats li.pw-off .pw-check.pw-mut { color: var(--text-3); }

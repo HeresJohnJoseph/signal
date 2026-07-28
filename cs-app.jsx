@@ -49,7 +49,8 @@ function App() {
      nothing downgrades before the Tier column exists. */
   const [tierInfo, setTierInfo] = useState({ tier: "agency", gating: false });
   const [paywall, setPaywall] = useState(null);   // { gate } when a free user hits a locked export
-  const [plan, setPlan] = useState(PRICING_DEFAULT_PLAN);  // billing period chosen in the paywall
+  const [plan, setPlan] = useState(DEFAULT_PLAN);    // tier chosen in the paywall
+  const [cycle, setCycle] = useState(DEFAULT_CYCLE); // monthly | annual
   React.useEffect(() => {
     if (DEMO_MODE) return;
     let alive = true;
@@ -58,12 +59,14 @@ function App() {
     })();
     return () => { alive = false; };
   }, []);
-  /* Open the Paystack Pro checkout; if Paystack isn't configured yet, fall back to
-     the signup page's Go-Pro section. */
-  const onUpgrade = (chosen) => {
-    const p = chosen || plan;
-    openPaystackCheckout(getUserEmail(), p).then((ok) => { if (!ok) window.location.href = "signup.html#gopro"; });
-    if (window.posthog) window.posthog.capture("upgrade_clicked", { source: "paywall", tier: effTier, plan: p });
+  /* Send the buyer to the hosted Lemonsqueezy checkout. If no URL is
+     configured yet, fall back to the pricing page rather than dead-ending. */
+  const onUpgrade = (tier, cyc) => {
+    const t = tier || plan, c = cyc || cycle;
+    if (window.posthog) window.posthog.capture("upgrade_clicked", { source: "paywall", from_tier: effTier, tier: t, cycle: c });
+    lemonCheckoutUrl(t, c, getUserEmail())
+      .then((url) => { window.location.href = url || "pricing.html"; })
+      .catch(() => { window.location.href = "pricing.html"; });
   };
 
   const handleSetApiKey = (k) => { localStorage.setItem("cs_gemini_key", k); setApiKey(k); };
@@ -352,20 +355,37 @@ function App() {
             <div className="pw-kicker">{paywall.gate === 'runs' ? "MONTHLY LIMIT REACHED" : "UPGRADE TO UNLOCK"}</div>
             {paywall.gate === 'runs' ? (
               <>
-                <h3>You've used your {runCap} reports this month</h3>
-                <p>Your <strong>Free</strong> plan includes {runCap} reports a month. Upgrade to Pro for <strong>10 reports a month</strong> plus clean, client-ready exports. Your limit resets on the 1st.</p>
+                <h3>You've used your {runCap} snapshots this month</h3>
+                <p><strong>Insight</strong> includes 5 snapshots a month. <strong>Intelligence</strong> is unlimited. Your limit resets on the 1st.</p>
+              </>
+            ) : paywall.gate === 'export_powerpoint' ? (
+              <>
+                <h3>PowerPoint export is an Intelligence feature</h3>
+                <p><strong>Insight</strong> exports to PDF. Move up to <strong>Intelligence</strong> for the PowerPoint deck and unlimited snapshots.</p>
               </>
             ) : (
               <>
-                <h3>Clean, client-ready exports are a Pro feature</h3>
-                <p>You're on <strong>Free</strong>. Go Pro to remove the Signal watermark and unlock the <strong>PowerPoint deck</strong> and <strong>Intelligence Report</strong>.</p>
+                <h3>Unlock the full export set</h3>
+                <p>Upgrade to <strong>Intelligence</strong> for unlimited snapshots plus <strong>PowerPoint</strong> alongside PDF.</p>
               </>
             )}
-            {/* Billing period is a choice, not a comparison — both plans unlock
-                the identical feature set below, so the features are listed once. */}
-            <div className="pw-plans" role="radiogroup" aria-label="Choose a billing period">
-              {["weekly", "annual"].map((id) => {
-                const p = PRICING[id];
+            {/* Two tiers, not two billing periods — the tiers differ in what
+                they unlock, so each carries its own feature list. The cycle
+                switch below applies to whichever tier is chosen. */}
+            <div className="pw-cycle" role="radiogroup" aria-label="Billing period">
+              {["monthly", "annual"].map((c) => (
+                <button key={c} type="button" role="radio" aria-checked={cycle === c}
+                        className={"pw-cycle-opt" + (cycle === c ? " on" : "")}
+                        onClick={() => setCycle(c)}>
+                  {c === "monthly" ? "Monthly" : "Annual"}
+                  {c === "annual" && <span className="pw-save">Save 17%</span>}
+                </button>
+              ))}
+            </div>
+            <div className="pw-plans" role="radiogroup" aria-label="Choose a plan">
+              {PLAN_ORDER.map((id) => {
+                const p = PLANS[id];
+                const price = planPrice(id, cycle);
                 const on = plan === id;
                 return (
                   <button
@@ -379,30 +399,36 @@ function App() {
                     {p.badge && <div className="pw-plan-badge">{p.badge}</div>}
                     <div className="pw-plan-head">
                       <span className="pw-radio" aria-hidden="true" />
-                      <span className="pw-plan-name">{p.label}</span>
+                      <span className="pw-plan-name">{p.name}</span>
                     </div>
                     <div className="pw-plan-price">
-                      <span className="pw-amt">{p.amount}</span>
-                      <span className="pw-per">{p.per}</span>
+                      <span className="pw-amt">{price.usd}</span>
+                      <span className="pw-per">{price.per}</span>
                     </div>
-                    <div className="pw-plan-tag">{p.equiv}</div>
+                    {/* USD is charged; ZAR is an approximate guide */}
+                    <div className="pw-plan-zar">approx. {price.zar}{price.per}</div>
+                    <div className="pw-plan-tag">{p.limits.snapshotsLabel} · {p.limits.exports.includes("pptx") ? "PDF + PowerPoint" : "PDF only"}</div>
                   </button>
                 );
               })}
             </div>
             <ul className="pw-feats pw-feats-shared">
-              <li><span className="pw-check">✓</span><span><strong>10 reports / month</strong> <em>(Free: {runCap})</em></span></li>
-              <li><span className="pw-check">✓</span><span>Full AI competitor analysis</span></li>
-              <li><span className="pw-check">✓</span><span><strong>Clean, unwatermarked</strong> exports</span></li>
-              <li><span className="pw-check">✓</span><span>PowerPoint + PDF + Intelligence Report</span></li>
+              {PLANS[plan].features.map((f, i) => (
+                <li key={i} className={f.on ? "" : "pw-off"}>
+                  <span className={"pw-check" + (f.on ? "" : " pw-mut")}>{f.on ? "✓" : "✕"}</span>
+                  <span>{f.label}</span>
+                </li>
+              ))}
             </ul>
             <div className="pw-actions">
-              <button className="pw-upgrade" onClick={() => onUpgrade(plan)}>
-                Go Pro — {PRICING[plan].cta} →
+              <button className="pw-upgrade" onClick={() => onUpgrade(plan, cycle)}>
+                Subscribe to {PLANS[plan].name} — {planPrice(plan, cycle).usd}{planPrice(plan, cycle).per} →
               </button>
-              <button className="pw-dismiss" onClick={() => setPaywall(null)}>Maybe later</button>
+              <a className="pw-dismiss" href="pricing.html" style={{ textDecoration: "none", textAlign: "center" }}>Compare plans</a>
             </div>
-            <div className="pw-terms">{PRICING[plan].note} Secure checkout via Paystack.</div>
+            <div className="pw-terms">
+              Billed in USD ({planPrice(plan, cycle).usd}{planPrice(plan, cycle).per}) — approx. {planPrice(plan, cycle).zar}{planPrice(plan, cycle).per}. Cancel anytime. Secure checkout via Lemonsqueezy.
+            </div>
           </div>
         </div>
       )}
