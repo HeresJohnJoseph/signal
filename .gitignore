@@ -1,5 +1,8 @@
 .claude/
 *.mp4
+# ...except the hero clip, which is a shipped asset: without this the
+# empty-state hero silently degrades to its poster frame on Vercel.
+!assets/hero-hands.mp4
 thumbnail.png
 proxy-server.js
 versions/

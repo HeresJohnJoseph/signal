@@ -425,12 +425,23 @@ function App() {
               <p>{hasCards ? `Running AI analysis on ${cards.filter(c=>c.analyzed).length} of ${cards.length} brand windows. Hang tight.` : "Fetching competitor links from the tracker sheet."}</p>
             </div>
           ) : runState !== "ready" ? (
-            <div className="stage-msg">
+            <div className="stage-msg is-hero">
               {fetchErr && <div className="sm-err">⚠ {fetchErr}</div>}
-              <div className="sm-glyph">◈</div>
-              <h2>Ready when you are.</h2>
-              <p>Select a brand and reporting period, then run the snapshot to pull live competitor links from the tracker and build a brand window per competitor.</p>
-              <div className="sm-meta">No windows loaded · {brandLabel}</div>
+              <div className="sm-stage">
+                <video className="sm-hands" playsInline muted autoPlay loop
+                       preload="auto" poster="assets/hero-poster.jpg" aria-hidden="true">
+                  <source src="assets/hero-hands.mp4" type="video/mp4" />
+                </video>
+                <span className="sm-bloom" />
+              </div>
+              <div className="sm-copy">
+                <h2>
+                  <span className="l1">Your category,</span>
+                  <span className="l2">read back to <em className="contact-grad" style={{ fontStyle: "normal" }}>you.</em></span>
+                </h2>
+                <p>Select a brand and reporting period, then run the snapshot to pull live competitor links from the tracker and build a brand window per competitor.</p>
+                <div className="sm-meta">No windows loaded · {brandLabel}</div>
+              </div>
             </div>
           ) : !hasCards ? (
             <div className="stage-msg">
