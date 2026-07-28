@@ -7,7 +7,8 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Inter:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=Playfair+Display:wght@600;700;800&family=Inter:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<link rel="preload" as="image" href="assets/hero-poster.jpg" />
 
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 
@@ -186,13 +187,109 @@
   .xk { color: var(--text-3); flex-shrink: 0; font-weight: 700; }
   .off { color: var(--text-3); }
   @media (max-width: 440px) { .plans { grid-template-columns: 1fr; } }
+
+  /* ==========================================================
+     LANDING HERO — the contact moment sits above the access
+     card, so the first thing a visitor meets is the idea, and
+     the form is what they scroll into.
+     ========================================================== */
+  .landing {
+    width: 100%;
+    display: flex; flex-direction: column; align-items: center;
+    gap: clamp(18px, 4vh, 44px);
+  }
+
+  .lp-hero {
+    position: relative;
+    width: 100%; max-width: 900px;
+    display: flex; flex-direction: column; align-items: center;
+    text-align: center;
+  }
+
+  /* screen blend dissolves the clip's black ground into the page —
+     no stacking context may sit between this and the body background
+     or the hands come back as a black rectangle */
+  .lp-hands {
+    display: block;
+    width: min(92%, 660px);
+    mix-blend-mode: screen;
+    filter: contrast(1.5) brightness(.92) saturate(1.14);
+    mask-image: radial-gradient(ellipse 66% 64% at 50% 48%, #000 32%, rgba(0,0,0,.5) 62%, transparent 84%);
+    -webkit-mask-image: radial-gradient(ellipse 66% 64% at 50% 48%, #000 32%, rgba(0,0,0,.5) 62%, transparent 84%);
+    pointer-events: none;
+  }
+  .lp-bloom {
+    position: absolute; left: 46.5%; top: 40%;
+    width: 30%; aspect-ratio: 1; transform: translate(-50%,-50%);
+    pointer-events: none; mix-blend-mode: screen; filter: blur(26px);
+    background: radial-gradient(circle, rgba(255,255,255,.15), rgba(139,238,255,.07) 40%, transparent 70%);
+    animation: lp-bloom 5s cubic-bezier(.65,0,.35,1) infinite;
+  }
+  @keyframes lp-bloom {
+    0%,100% { opacity:.35; transform: translate(-50%,-50%) scale(.92); }
+    50%     { opacity:1;   transform: translate(-50%,-50%) scale(1.06); }
+  }
+
+  .lp-copy { margin-top: -9%; padding: 0 20px; }
+  .lp-title {
+    font-family: 'Archivo', var(--sans);
+    font-size: clamp(30px, 5.6vw, 62px);
+    line-height: .94; margin: 0 0 16px;
+  }
+  .lp-title .l1 {
+    display: block; font-variation-settings: 'wdth' 108, 'wght' 200;
+    font-size: .48em; letter-spacing: -.02em; color: var(--text-2); margin-bottom: .16em;
+  }
+  .lp-title .l2 {
+    display: block; font-variation-settings: 'wdth' 92, 'wght' 900; letter-spacing: -.035em;
+  }
+  .contact-grad {
+    font-style: normal;
+    background: linear-gradient(96deg, var(--accent-lt) 0%, var(--accent) 24%, #B96A9B 52%, #22D3EE 78%, #8BEEFF 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .lp-sub {
+    max-width: 46ch; margin: 0 auto;
+    font-size: 15px; line-height: 1.6; color: var(--text-2);
+  }
+  .lp-sub b { color: var(--text-1); font-weight: 600; }
+
+  /* the access card keeps its look but is no longer the page's h1 */
+  .card h2 {
+    font-family: var(--serif); font-size: 30px; font-weight: 700;
+    margin: 0 0 8px; letter-spacing: -0.01em; color: var(--text-1);
+  }
+
+  @media (prefers-reduced-motion: reduce) { .lp-bloom { animation: none; } }
+  @media (max-width: 560px) {
+    .lp-hands { width: 118%; max-width: none; }
+    .lp-copy { margin-top: -14%; }
+  }
 </style>
 </head>
 <body>
 
+<main class="landing">
+
+<!-- LANDING HERO — human strategy meeting machine analysis -->
+<section class="lp-hero">
+  <video class="lp-hands" playsinline muted autoplay loop
+         preload="auto" poster="assets/hero-poster.jpg" aria-hidden="true">
+    <source src="assets/hero-hands.mp4" type="video/mp4" />
+  </video>
+  <span class="lp-bloom"></span>
+  <div class="lp-copy">
+    <h1 class="lp-title">
+      <span class="l1">Your category,</span>
+      <span class="l2">read back to <em class="contact-grad">you.</em></span>
+    </h1>
+    <p class="lp-sub">Every brand in your category, watched across four platforms — then read back to you as <b>strategy</b>, not a spreadsheet.</p>
+  </div>
+</section>
+
 <div class="card">
   <div class="brandmark">◈</div>
-  <h1>Signal — Request Access</h1>
+  <h2>Signal — Request Access</h2>
   <div class="subline">Brand &amp; Competitor Intelligence · Private Beta</div>
   <div class="divider"></div>
 
@@ -337,6 +434,8 @@
 
   <div class="foot">Your details are only used to set up your Signal access.<br/>No spam, ever.</div>
 </div>
+
+</main>
 
 <script>
   var GOOGLE_CLIENT_ID = '668202609701-02uo3t9tf33015m6kphugtm7rnolvrne.apps.googleusercontent.com';
