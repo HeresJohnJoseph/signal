@@ -280,7 +280,9 @@ async function fetchSharedConfig() {
     rows.forEach(r => {
       const k = (r[0] || "").replace(/^"|"$/g, "").trim().toLowerCase();
       const v = (r[1] || "").replace(/^"|"$/g, "").trim();
-      if (k && v && ["apify_token", "gemini_key", "stripe_pro_url"].includes(k)) cfg[k] = v;
+      if (k && v && ["apify_token", "gemini_key", "stripe_pro_url",
+                     "paystack_public_key", "paystack_plan_weekly", "paystack_plan_annual",
+                     "paystack_price_weekly", "paystack_price_annual"].includes(k)) cfg[k] = v;
     });
     return (_sharedConfig = cfg);
   } catch { return (_sharedConfig = {}); }
@@ -463,6 +465,128 @@ function proCheckoutLink(base, email) {
   const sep = base.includes("?") ? "&" : "?";
   const e = encodeURIComponent(email || "");
   return `${base}${sep}prefilled_email=${e}&client_reference_id=${e}`;
+}
+
+/* ---- Paystack checkout (inline popup via js.paystack.co v2) ----
+   The PUBLIC key and plan codes live in the Config tab. The public key is
+   safe to expose (it can only open a transaction — it cannot read data or
+   move money); the SECRET key must never appear client-side and is only
+   used by api/paystack-webhook.js. Test vs live is inferred by Paystack
+   from the key prefix (pk_test_ / pk_live_), so nothing to switch here.
+
+   Amount and currency come from the Paystack PLAN, not from this file —
+   passing a plan code means Paystack charges exactly what the plan says.
+   PRICING below is display copy only and must be kept in step with it. */
+const PAYSTACK_SUCCESS_URL = "https://signal-eight-opal.vercel.app/?pro=success";
+
+/* ---- Signal Pro pricing — single source of truth ----
+   Both plans unlock exactly the same features; they differ only in billing
+   period. `annual` is the default selection. Every surface (paywall, signup,
+   sidebar) reads these strings, so a price change happens in one place.
+   `equiv` states the true annualised cost of each plan — keep it accurate and
+   keep it on screen: showing "$8/week" without "$416/year" next to it is the
+   kind of thing consumer-protection regulators treat as a misleading price.
+
+   ⚠ CURRENCY — UNRESOLVED. These strings are USD, carried over from the
+   Stripe/Paddle era. A South African Paystack account settles in ZAR, so the
+   Paystack plan will charge ZAR while this copy promises dollars. Showing a
+   price in one currency and charging another is exactly the misleading-price
+   problem the note above warns about. Before taking a single real payment,
+   set these to the ZAR figures that match the Paystack plans (or override
+   them per-environment via paystack_price_weekly / paystack_price_annual in
+   the Config tab). Nothing here affects what is charged — Paystack charges
+   the plan — but everything here affects what the customer was promised. */
+const PRICING = {
+  weekly: {
+    id: "weekly", label: "Weekly", amount: "$8", per: "/week",
+    equiv: "$416 billed over a year",
+    note: "Billed every week. Cancel anytime.",
+    cta: "$8/week",
+  },
+  annual: {
+    id: "annual", label: "Annual", amount: "$79", per: "/year",
+    equiv: "just $1.52 a week",
+    note: "One payment a year. Renews annually — cancel anytime.",
+    cta: "$79/year",
+    badge: "SAVE 81%",
+  },
+};
+const PRICING_DEFAULT_PLAN = "annual";
+
+async function getPaystackConfig() {
+  const c = await fetchSharedConfig();
+  return {
+    publicKey:  (c && c.paystack_public_key)  || "",
+    planWeekly: (c && c.paystack_plan_weekly) || "",  // PLN_… weekly plan code
+    planAnnual: (c && c.paystack_plan_annual) || "",  // PLN_… annual plan code
+    /* optional display overrides, so prices can be corrected in the sheet
+       without a redeploy (see PRICING) */
+    priceWeekly: (c && c.paystack_price_weekly) || "",
+    priceAnnual: (c && c.paystack_price_annual) || "",
+  };
+}
+/* Resolve a plan id to its configured Paystack plan code, falling back to
+   whichever plan exists so a half-configured Config tab still sells something
+   rather than dead-ending the user. */
+function paystackPlanFor(cfg, plan) {
+  const weekly = cfg.planWeekly, annual = cfg.planAnnual;
+  if (plan === "weekly") return weekly || annual;
+  return annual || weekly;
+}
+/* True once the Config tab has a public key + at least one plan code. */
+async function paystackConfigured() {
+  const cfg = await getPaystackConfig();
+  return !!(cfg.publicKey && (cfg.planWeekly || cfg.planAnnual));
+}
+let _paystackJs = null;
+function loadPaystackJs() {
+  if (_paystackJs) return _paystackJs;
+  _paystackJs = new Promise((resolve, reject) => {
+    if (window.PaystackPop) return resolve(window.PaystackPop);
+    const s = document.createElement("script");
+    s.src = "https://js.paystack.co/v2/inline.js";
+    s.async = true;
+    s.onload = () => window.PaystackPop
+      ? resolve(window.PaystackPop)
+      : reject(new Error("Paystack loaded but PaystackPop missing"));
+    s.onerror = () => reject(new Error("Paystack inline.js failed to load"));
+    document.head.appendChild(s);
+  });
+  return _paystackJs;
+}
+/* Open the Signal Pro checkout popup.
+   Paystack requires an email — without one there is nothing to key the
+   subscription or the webhook's Pro grant to, so we refuse rather than
+   open a checkout that cannot be honoured.
+   `metadata.email` mirrors the customer email so api/paystack-webhook.js
+   has a reliable source even if the customer object shape changes.
+   Returns false (without opening) if Paystack isn't configured yet. */
+async function openPaystackCheckout(email, plan = PRICING_DEFAULT_PLAN) {
+  const cfg = await getPaystackConfig();
+  const planCode = paystackPlanFor(cfg, plan);
+  if (!cfg.publicKey || !planCode || !email) return false;
+
+  let Pop;
+  try { Pop = await loadPaystackJs(); } catch { return false; }
+
+  const popup = new Pop();
+  popup.newTransaction({
+    key: cfg.publicKey,
+    email,
+    plan: planCode,          // amount + currency + interval come from the plan
+    metadata: { email, product: "signal_pro", plan_id: plan },
+    onSuccess: () => {
+      /* Local flag is optimistic UX only — the webhook is the source of
+         truth and writes the Pro row server-side. */
+      try { setProStatus(true); } catch (e) {}
+      if (window.posthog) window.posthog.capture("pro_checkout_success", { email, plan });
+      window.location.href = PAYSTACK_SUCCESS_URL;
+    },
+    onCancel: () => {
+      if (window.posthog) window.posthog.capture("pro_checkout_cancelled", { plan });
+    },
+  });
+  return true;
 }
 
 /* Direct browser call to Gemini with auto-retry on 429/503 */
@@ -1856,4 +1980,6 @@ Object.assign(window, {
   searchBrandCompetitors, findKnownBrand, registerCustomBrand, requestBrand,
   CUSTOM_BRAND_KEY, BRAND_CATEGORIES, contextLabel, getUserTier,
   getRunsThisMonth, incrementRuns, runCapForTier,
+  getPaystackConfig, paystackConfigured, openPaystackCheckout,
+  PRICING, PRICING_DEFAULT_PLAN,
 });

@@ -884,12 +884,12 @@ function Sidebar(props) {
           runsUsed = 0, runCap = Infinity, showRunQuota = false } = props;
   /* Signal Pro — badge when paid, "Go Pro" CTA otherwise. */
   const [isPro, setIsPro] = _useS(getProStatus());
-  const [stripeUrl, setStripeUrl] = _useS("");
+  const [canBuyPro, setCanBuyPro] = _useS(false);   // Paystack configured (public key + plan)
   React.useEffect(() => {
     let alive = true;
     (async () => {
-      const url = await getStripeProUrl();
-      if (alive) setStripeUrl(url);
+      const ready = await paystackConfigured();
+      if (alive) setCanBuyPro(ready);
       /* never downgrade a just-paid local flag; upgrade across devices */
       const pro = getProStatus() || await checkProRemote(getUserEmail());
       if (alive) { setIsPro(pro); setProStatus(pro); }
@@ -1019,11 +1019,14 @@ function Sidebar(props) {
               <span className="quota-v" style={{ color: "var(--accent)", fontWeight: 700 }}>PRO · full access</span>
             </span>
           </div>
-        ) : stripeUrl ? (
-          <a className="btn-ppt" href={proCheckoutLink(stripeUrl, getUserEmail())} target="_blank" rel="noopener"
-             style={{ textDecoration: "none", textAlign: "center" }}>
+        ) : canBuyPro ? (
+          <button className="btn-ppt" onClick={() => {
+              openPaystackCheckout(getUserEmail());
+              if (window.posthog) window.posthog.capture("upgrade_clicked", { source: "sidebar" });
+            }}
+             style={{ textAlign: "center", cursor: "pointer" }}>
             <span className="ppt-ic">★</span>Go Pro — Unlock Full Access
-          </a>
+          </button>
         ) : null}
 
         <div className={"quota-chip" + (geminiCalls >= 1425 ? " quota-red" : geminiCalls >= 1200 ? " quota-amber" : "")}>

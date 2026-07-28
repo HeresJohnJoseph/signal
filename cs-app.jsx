@@ -49,16 +49,22 @@ function App() {
      nothing downgrades before the Tier column exists. */
   const [tierInfo, setTierInfo] = useState({ tier: "agency", gating: false });
   const [paywall, setPaywall] = useState(null);   // { gate } when a free user hits a locked export
-  const [stripeUrl, setStripeUrl] = useState("");
+  const [plan, setPlan] = useState(PRICING_DEFAULT_PLAN);  // billing period chosen in the paywall
   React.useEffect(() => {
     if (DEMO_MODE) return;
     let alive = true;
     (async () => {
       const t = await getUserTier(getUserEmail()); if (alive) setTierInfo(t);
-      const u = await getStripeProUrl(); if (alive) setStripeUrl(u);
     })();
     return () => { alive = false; };
   }, []);
+  /* Open the Paystack Pro checkout; if Paystack isn't configured yet, fall back to
+     the signup page's Go-Pro section. */
+  const onUpgrade = (chosen) => {
+    const p = chosen || plan;
+    openPaystackCheckout(getUserEmail(), p).then((ok) => { if (!ok) window.location.href = "signup.html#gopro"; });
+    if (window.posthog) window.posthog.capture("upgrade_clicked", { source: "paywall", tier: effTier, plan: p });
+  };
 
   const handleSetApiKey = (k) => { localStorage.setItem("cs_gemini_key", k); setApiKey(k); };
   const handleSetSignal = (k) => { localStorage.setItem("cs_signal_kw", k); setSignalKeyword(k); };
@@ -355,35 +361,48 @@ function App() {
                 <p>You're on <strong>Free</strong>. Go Pro to remove the Signal watermark and unlock the <strong>PowerPoint deck</strong> and <strong>Intelligence Report</strong>.</p>
               </>
             )}
-            <div className="pw-plans">
-              <div className="pw-plan">
-                <div className="pw-plan-name">Free</div>
-                <div className="pw-plan-price"><span className="pw-amt">$0</span></div>
-                <div className="pw-plan-tag">Your current plan</div>
-                <ul className="pw-feats">
-                  <li><span className="pw-check pw-mut">✓</span><span>2 reports / month</span></li>
-                  <li><span className="pw-check pw-mut">✓</span><span>Full AI competitor analysis</span></li>
-                  <li><span className="pw-check pw-mut">✓</span><span>PDF export <em>(watermarked)</em></span></li>
-                  <li className="pw-off"><span className="pw-x">✕</span><span>PowerPoint &amp; Report</span></li>
-                </ul>
-              </div>
-              <div className="pw-plan pw-plan-hi">
-                <div className="pw-plan-badge">RECOMMENDED</div>
-                <div className="pw-plan-name">Pro</div>
-                <div className="pw-plan-price"><span className="pw-amt">$29</span><span className="pw-per">/mo</span></div>
-                <div className="pw-plan-tag">or $290/yr — 2 months free</div>
-                <ul className="pw-feats">
-                  <li><span className="pw-check">✓</span><span><strong>10 reports / month</strong></span></li>
-                  <li><span className="pw-check">✓</span><span>Full AI competitor analysis</span></li>
-                  <li><span className="pw-check">✓</span><span><strong>Clean, unwatermarked</strong> exports</span></li>
-                  <li><span className="pw-check">✓</span><span>PowerPoint + PDF + Report</span></li>
-                </ul>
-              </div>
+            {/* Billing period is a choice, not a comparison — both plans unlock
+                the identical feature set below, so the features are listed once. */}
+            <div className="pw-plans" role="radiogroup" aria-label="Choose a billing period">
+              {["weekly", "annual"].map((id) => {
+                const p = PRICING[id];
+                const on = plan === id;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    role="radio"
+                    aria-checked={on}
+                    className={"pw-plan pw-plan-opt" + (on ? " pw-plan-on" : "")}
+                    onClick={() => setPlan(id)}
+                  >
+                    {p.badge && <div className="pw-plan-badge">{p.badge}</div>}
+                    <div className="pw-plan-head">
+                      <span className="pw-radio" aria-hidden="true" />
+                      <span className="pw-plan-name">{p.label}</span>
+                    </div>
+                    <div className="pw-plan-price">
+                      <span className="pw-amt">{p.amount}</span>
+                      <span className="pw-per">{p.per}</span>
+                    </div>
+                    <div className="pw-plan-tag">{p.equiv}</div>
+                  </button>
+                );
+              })}
             </div>
+            <ul className="pw-feats pw-feats-shared">
+              <li><span className="pw-check">✓</span><span><strong>10 reports / month</strong> <em>(Free: {runCap})</em></span></li>
+              <li><span className="pw-check">✓</span><span>Full AI competitor analysis</span></li>
+              <li><span className="pw-check">✓</span><span><strong>Clean, unwatermarked</strong> exports</span></li>
+              <li><span className="pw-check">✓</span><span>PowerPoint + PDF + Intelligence Report</span></li>
+            </ul>
             <div className="pw-actions">
-              <a className="pw-upgrade" href={stripeUrl ? proCheckoutLink(stripeUrl, getUserEmail()) : "signup.html#gopro"} target="_blank" rel="noopener">Upgrade to Pro — $29/mo →</a>
+              <button className="pw-upgrade" onClick={() => onUpgrade(plan)}>
+                Go Pro — {PRICING[plan].cta} →
+              </button>
               <button className="pw-dismiss" onClick={() => setPaywall(null)}>Maybe later</button>
             </div>
+            <div className="pw-terms">{PRICING[plan].note} Secure checkout via Paystack.</div>
           </div>
         </div>
       )}
