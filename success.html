@@ -13,7 +13,10 @@
 <link rel="stylesheet" href="cs-pricing.css?v=20260728a" />
 <style>
   html, body { margin: 0; padding: 0; background: #05070C; }
-  :root[data-theme="light"] body { background: #F7F8FA; }
+  /* :root as well as body — html paints the canvas when it has its own
+     background, so overriding body alone left a dark band below this page's
+     short content in light mode. */
+  :root[data-theme="light"], :root[data-theme="light"] body { background: #F7F8FA; }
   * { box-sizing: border-box; }
   .sx-wrap { max-width: 620px; margin: 0 auto; text-align: center; padding: clamp(60px,12vh,120px) 0; }
   .sx-mark {

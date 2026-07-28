@@ -175,6 +175,13 @@
   padding: 5px 11px; border-radius: 999px; color: #fff;
   background: linear-gradient(120deg, var(--pr-human), #B96A9B);
 }
+/* Reserves the badge row's height on the unbadged card. visibility keeps the
+   box in flow, which is the whole point — display:none would not. */
+.pr-badge-ghost { visibility: hidden; }
+/* Once the cards stack there is nothing left to line up, so the reserved row
+   is just 37px of dead space at the top of the first card. Matches the
+   single-column breakpoint below. */
+@media (max-width: 780px) { .pr-badge-ghost { display: none; } }
 .pr-name {
   font-family: 'Archivo', sans-serif; font-variation-settings: 'wdth' 94, 'wght' 800;
   font-size: clamp(24px,2.6vw,32px); letter-spacing: -.03em; margin: 0; line-height: 1;

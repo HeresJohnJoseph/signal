@@ -16,7 +16,11 @@
 <link rel="stylesheet" href="cs-pricing.css?v=20260728a" />
 <style>
   html, body { margin: 0; padding: 0; background: #05070C; }
-  :root[data-theme="light"] body { background: #F7F8FA; }
+  /* The light override has to hit :root too, not just body. html carries its
+     own background here, so html is what paints the page canvas and body's
+     colour never propagates up — overriding body alone left the dark value
+     showing on overscroll and anywhere content was shorter than the viewport. */
+  :root[data-theme="light"], :root[data-theme="light"] body { background: #F7F8FA; }
   * { box-sizing: border-box; }
 </style>
 

@@ -68,7 +68,11 @@ const PLANS = {
 
 const PLAN_ORDER = ["insight", "intelligence"];
 const DEFAULT_PLAN = "intelligence";
-const DEFAULT_CYCLE = "annual";
+/* Monthly is the default view so the page leads with the headline prices the
+   tiers are actually sold on ($49 / $99). Annual is one tap away and carries
+   the Save 17% callout — but opening on $490/$990 makes Signal look four
+   times more expensive than it is at a glance. */
+const DEFAULT_CYCLE = "monthly";
 
 /* The comparison matrix is derived from the plans above rather than
    written out again — two lists of the same facts drift apart. */
@@ -151,7 +155,13 @@ function PlanCard({ id, cycle, onSubscribe, busy }) {
   return (
     <article className={"pr-card liquid" + (plan.featured ? " pr-card-hi" : "")}>
       <span className="refract" /><span className="sheen" />
-      {plan.badge && <div className="pr-badge">{plan.badge}</div>}
+      {/* Both cards render the badge row — the unbadged one gets an invisible
+          copy — so the names, prices and Subscribe buttons line up across the
+          grid. A two-column comparison is read across, and only badging one
+          card pushed everything in it 37px down. */}
+      {plan.badge
+        ? <div className="pr-badge">{plan.badge}</div>
+        : <div className="pr-badge pr-badge-ghost" aria-hidden="true">MOST POPULAR</div>}
       <h3 className="pr-name">{plan.name}</h3>
       <p className="pr-tagline">{plan.tagline}</p>
       <Price plan={id} cycle={cycle} />
